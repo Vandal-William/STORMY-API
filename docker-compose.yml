@@ -1,0 +1,134 @@
+services:
+
+  # ======================
+  # API GATEWAY (SEUL POINT D'ENTRÉE)
+  # ======================
+  gateway:
+    build: ./services/gateway
+    container_name: gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - USER_SERVICE_URL=http://user-service:3000
+      - MESSAGE_SERVICE_URL=http://message-service:3001
+      - PRESENCE_SERVICE_URL=http://presence-service:3002
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - user-service
+      - message-service
+      - presence-service
+      - nats
+
+  # ======================
+  # GO SERVICES (INTERNE)
+  # ======================
+  message-service:
+    build: ./services/message
+    container_name: message-service
+    environment:
+      - REDIS_HOST=redis-message
+      - CASSANDRA_HOST=cassandra
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - redis-message
+      - cassandra
+      - nats
+
+  presence-service:
+    build: ./services/presence
+    container_name: presence-service
+    environment:
+      - REDIS_HOST=redis-user
+    depends_on:
+      - redis-user
+
+  # ======================
+  # NESTJS SERVICES (INTERNE)
+  # ======================
+  user-service:
+    build: ./services/user
+    container_name: user-service
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app
+      - REDIS_HOST=redis-user
+      - JWT_SECRET=dev-secret
+    depends_on:
+      - postgres
+      - redis-user
+
+  notification-service:
+    build: ./services/notification
+    container_name: notification-service
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - postgres
+      - nats
+
+  moderation-service:
+    build: ./services/moderation
+    container_name: moderation-service
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - postgres
+      - nats
+
+  # ======================
+  # BROKER
+  # ======================
+  nats:
+    image: nats:2.10
+    container_name: nats
+    ports:
+      - "8222:8222"   # monitoring uniquement (optionnel)
+
+  # ======================
+  # REDIS
+  # ======================
+  redis-user:
+    image: redis:7
+    container_name: redis-user
+
+  redis-message:
+    image: redis:7
+    container_name: redis-message
+
+  # ======================
+  # DATABASES
+  # ======================
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: dev-cluster
+      CASSANDRA_DC: dc1
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+
+  # ======================
+  # MONITORING
+  # ======================
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3009:3000"
+    depends_on:
+      - gateway
+
+volumes:
+  postgres_data:
+  cassandra_data:

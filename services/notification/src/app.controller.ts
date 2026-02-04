@@ -9,4 +9,12 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  @Get('info')
+  getInfo() {
+    return {
+      service: 'notification',
+      status: 'ok',
+    };
+  }
 }

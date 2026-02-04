@@ -8,8 +8,8 @@ COPY package*.json ./
 RUN npm install
 
 # Prisma
-COPY prisma ./prisma
-RUN npx prisma generate
+# COPY prisma ./prisma
+# RUN npx prisma generate
 
 # Code source
 COPY . .
@@ -26,7 +26,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
+# COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3000
 

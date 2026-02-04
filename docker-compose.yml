@@ -12,6 +12,8 @@ services:
       - USER_SERVICE_URL=http://user-service:3000
       - MESSAGE_SERVICE_URL=http://message-service:3001
       - PRESENCE_SERVICE_URL=http://presence-service:3002
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3003
+      - MODERATION_SERVICE_URL=http://moderation-service:3004
       - NATS_URL=nats://nats:4222
     depends_on:
       - user-service
@@ -45,6 +47,7 @@ services:
   # ======================
   # NESTJS SERVICES (INTERNE)
   # ======================
+  
   user-service:
     build: ./services/user
     container_name: user-service
@@ -75,7 +78,7 @@ services:
     depends_on:
       - postgres
       - nats
-
+  
   # ======================
   # BROKER
   # ======================

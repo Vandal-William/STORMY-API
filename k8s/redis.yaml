@@ -1,0 +1,142 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-user
+  namespace: default
+  labels:
+    app: redis-user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-user
+  template:
+    metadata:
+      labels:
+        app: redis-user
+    spec:
+      containers:
+        - name: redis-user
+          image: redis:7
+          imagePullPolicy: IfNotPresent
+          command:
+            - redis-server
+            - "--appendonly"
+            - "yes"
+          ports:
+            - containerPort: 6379
+              name: redis
+          volumeMounts:
+            - name: redis-storage
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: redis-storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-user
+  namespace: default
+  labels:
+    app: redis-user
+spec:
+  selector:
+    app: redis-user
+  ports:
+    - port: 6379
+      targetPort: 6379
+      name: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-message
+  namespace: default
+  labels:
+    app: redis-message
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-message
+  template:
+    metadata:
+      labels:
+        app: redis-message
+    spec:
+      containers:
+        - name: redis-message
+          image: redis:7
+          imagePullPolicy: IfNotPresent
+          command:
+            - redis-server
+            - "--appendonly"
+            - "yes"
+          ports:
+            - containerPort: 6379
+              name: redis
+          volumeMounts:
+            - name: redis-storage
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: redis-storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-message
+  namespace: default
+  labels:
+    app: redis-message
+spec:
+  selector:
+    app: redis-message
+  ports:
+    - port: 6379
+      targetPort: 6379
+      name: redis

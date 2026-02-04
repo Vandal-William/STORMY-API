@@ -1,0 +1,71 @@
+## INSTALLER KUBERNETES
+
+### 1️⃣ Pré-requis : Docker
+```shell
+docker --version
+```
+### 2️⃣ Installer kubectl (outil pour parler à Kubernetes)
+```shell
+curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+```
+Test :
+```shell
+kubectl version --client
+```
+### 3️⃣ Installer KIND
+```shell
+curl -Lo kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
+chmod +x kind
+sudo mv kind /usr/local/bin/
+```
+### 4️⃣ Créer Kubernetes (1 commande 😎)
+```shell
+kind create cluster
+```
+### 5️⃣ Vérifier
+```shell
+kubectl get nodes
+```
+Tu dois voir :
+kind-control-plane   Ready
+
+## LANCER LES PODS
+
+### Build les images Docker 
+```shell
+docker build -t gateway:dev ./services/gateway
+docker build -t message-service:dev ./services/message
+docker build -t presence-service:dev ./services/presence
+docker build -t user-service:dev ./services/user
+docker build -t notification-service:dev ./services/notification
+docker build -t moderation-service:dev ./services/moderation
+```
+### Charger les images builder
+```shell
+kind load docker-image gateway:dev
+kind load docker-image message-service:dev
+kind load docker-image presence-service:dev
+kind load docker-image user-service:dev
+kind load docker-image notification-service:dev
+kind load docker-image moderation-service:dev
+```
+### Vérifier l’état des Pods
+```shell
+kubectl get pods
+```
+## AUTRE COMMANDES
+
+### Si un Pod n’est PAS Running
+```shell
+kubectl describe pod <nom-du-pod>
+```
+### Voir les logs
+```shell
+kubectl logs <nom-du-pod>
+```
+### Vérifier les Services
+```shell
+kubectl get svc
+```

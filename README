@@ -121,4 +121,5 @@ kubectl logs <nom-du-pod>
 ### Vérifier les Services
 ```shell
 kubectl get svc
+
 ```

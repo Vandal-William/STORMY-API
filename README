@@ -51,9 +51,62 @@ kind load docker-image user-service:dev
 kind load docker-image notification-service:dev
 kind load docker-image moderation-service:dev
 ```
+### Forcer un redémarrage des pods
+```shell
+kubectl rollout restart deployment gateway
+kubectl rollout restart deployment message-service
+kubectl rollout restart deployment presence-service
+kubectl rollout restart deployment user-service
+kubectl rollout restart deployment notification-service
+kubectl rollout restart deployment moderation-service
+```
 ### Vérifier l’état des Pods
 ```shell
 kubectl get pods
+```
+## RELOAD AUTOMATIQUE DES CONTAINER
+### Installer Skaffold
+```shell
+curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64
+chmod +x skaffold
+sudo mv skaffold /usr/local/bin
+```
+Vérifie :
+```shell
+skaffold version
+```
+### Lancer Skaffold
+```shell
+skaffold dev
+```
+
+## NOTE: CASSANDRA
+Cassandra a été retiré de la configuration Skaffold car il demande trop de ressources pour KIND.
+Pour déployer Cassandra manuellement :
+```shell
+kubectl apply -f k8s/cassandra.yaml
+```
+Tous les autres services fonctionnent correctement ✅
+## SUPPRIMER ET RECRÉER LES PODS
+
+### Supprimer tous les pods
+```shell
+kubectl delete pods --all
+```
+
+### Supprimer tous les deployments
+```shell
+kubectl delete deployments --all
+```
+
+### Recréer tous les pods (via deployments)
+```shell
+kubectl apply -f k8s/
+```
+
+### Variante : Restart tous les deployments
+```shell
+kubectl rollout restart deployment --all
 ```
 ## AUTRE COMMANDES
 

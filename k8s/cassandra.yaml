@@ -1,3 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cassandra-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,9 +27,10 @@ spec:
       labels:
         app: cassandra
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: cassandra
-          image: cassandra:4.1
+          image: cassandra:3.11
           imagePullPolicy: IfNotPresent
           env:
             - name: CASSANDRA_CLUSTER_NAME
@@ -25,7 +38,21 @@ spec:
             - name: CASSANDRA_DC
               value: dc1
             - name: CASSANDRA_LISTEN_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: CASSANDRA_BROADCAST_RPC_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: CASSANDRA_RPC_ADDRESS
               value: "0.0.0.0"
+            - name: CASSANDRA_NUM_TOKENS
+              value: "256"
+            - name: HEAP_NEWSIZE
+              value: "128M"
+            - name: MAX_HEAP_SIZE
+              value: "256M"
           ports:
             - containerPort: 9042
               name: cql
@@ -38,30 +65,29 @@ spec:
               mountPath: /var/lib/cassandra
           resources:
             requests:
-              cpu: 500m
-              memory: 1Gi
+              cpu: 250m
+              memory: 512Mi
             limits:
-              cpu: 2000m
-              memory: 2Gi
+              cpu: 1000m
+              memory: 1Gi
           livenessProbe:
-            exec:
-              command:
-                - /bin/bash
-                - -c
-                - nodetool status
-            initialDelaySeconds: 60
+            tcpSocket:
+              port: 9042
+            initialDelaySeconds: 120
             periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
           readinessProbe:
-            exec:
-              command:
-                - /bin/bash
-                - -c
-                - nodetool status
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            tcpSocket:
+              port: 9042
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
       volumes:
         - name: cassandra-storage
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: cassandra-pvc
 ---
 apiVersion: v1
 kind: Service

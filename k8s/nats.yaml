@@ -3,8 +3,6 @@ kind: Deployment
 metadata:
   name: nats
   namespace: default
-  labels:
-    app: nats
 spec:
   replicas: 1
   selector:
@@ -30,24 +28,15 @@ spec:
           volumeMounts:
             - name: nats-config
               mountPath: /etc/nats
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 256Mi
           livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 8222
-            initialDelaySeconds: 10
+            tcpSocket:
+              port: 4222
+            initialDelaySeconds: 20
             periodSeconds: 10
           readinessProbe:
-            httpGet:
-              path: /healthz
-              port: 8222
-            initialDelaySeconds: 5
+            tcpSocket:
+              port: 4222
+            initialDelaySeconds: 10
             periodSeconds: 5
       volumes:
         - name: nats-config
@@ -64,26 +53,19 @@ data:
     server_name: NATS
     port: 4222
     http_port: 8222
-    jetstream {
-      store_dir: /data
-      max_memory: 128M
-      max_file: 256M
-    }
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: nats
   namespace: default
-  labels:
-    app: nats
 spec:
   selector:
     app: nats
   ports:
-    - port: 4222
+    - name: client
+      port: 4222
       targetPort: 4222
-      name: client
-    - port: 8222
+    - name: monitoring
+      port: 8222
       targetPort: 8222
-      name: monitoring

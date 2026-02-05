@@ -1,0 +1,35 @@
+apiVersion: skaffold/v4beta6
+kind: Config
+
+build:
+  local:
+    push: false
+  artifacts:
+    - image: gateway
+      context: services/gateway
+    - image: user-service
+      context: services/user
+    - image: message-service
+      context: services/message
+    - image: presence-service
+      context: services/presence
+    - image: notification-service
+      context: services/notification
+    - image: moderation-service
+      context: services/moderation
+
+deploy:
+  kubectl: {}
+
+manifests:
+  rawYaml:
+    - k8s/gateway.yaml
+    - k8s/grafana.yaml
+    - k8s/message.yaml
+    - k8s/moderation.yaml
+    - k8s/nats.yaml
+    - k8s/notification.yaml
+    - k8s/postgres.yaml
+    - k8s/presence.yaml
+    - k8s/redis.yaml
+    - k8s/user.yaml

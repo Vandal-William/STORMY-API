@@ -35,6 +35,11 @@ spec:
               value: http://moderation-service:3004
             - name: NATS_URL
               value: nats://nats:4222
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: secret
           resources:
             requests:
               cpu: 100m

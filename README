@@ -908,3 +908,6 @@ kubectl logs -l app=user-service -f
 # Voir les logs d'un conteneur précédent (avant crash)
 kubectl logs <pod> --container=<container> --previous
 ```
+kubectl get svc
+
+```

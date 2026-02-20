@@ -1,0 +1,202 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/gin-gonic/gin"
+	"message-service/internal/config"
+	"message-service/internal/handler"
+	"message-service/internal/infrastructure/cassandra"
+	"message-service/internal/middleware"
+	"message-service/internal/repository"
+	"message-service/internal/router"
+	"message-service/internal/service"
+)
+
+func main() {
+	// Load configuration from environment
+	cfg := config.Load()
+
+	// Setup logging
+	log.Println("======================================")
+	log.Println("Message Service - Starting")
+	log.Println("======================================")
+	log.Printf("Server: %s", cfg.Server.GetAddr())
+	log.Printf("Cassandra: %s", cfg.Cassandra.GetAddr())
+	log.Printf("Environment: %s", os.Getenv("ENVIRONMENT"))
+
+	// Initialize HTTP engine
+	engine := gin.Default()
+
+	// Add global middleware
+	engine.Use(middleware.LoggerMiddleware())
+
+	// ============================================================
+	// INITIALIZE CASSANDRA CLIENT
+	// ============================================================
+
+	log.Println("\nInitializing Cassandra connection...")
+
+	cassandraClient, err := cassandra.NewClient(cfg.Cassandra)
+	if err != nil {
+		log.Fatalf("Failed to connect to Cassandra: %v", err)
+	}
+	defer cassandraClient.Close()
+
+	// Verify connection is working
+	if err := cassandraClient.HealthCheck(); err != nil {
+		log.Fatalf("Cassandra health check failed: %v", err)
+	}
+
+	log.Println("✓ Cassandra connected successfully")
+
+	// ============================================================
+	// INITIALIZE REPOSITORIES
+	// ============================================================
+
+	// You can choose between implementations:
+
+	// Option 1: Use Cassandra (Production)
+	messageRepo := repository.NewCassandraMessageRepository(cassandraClient)
+	conversationRepo := repository.NewCassandraConversationRepository(cassandraClient)
+
+	// Option 2: Use In-Memory (Development/Testing)
+	// Uncomment below to use in-memory repositories
+	// messageRepo := repository.NewInMemoryMessageRepository()
+	// conversationRepo := repository.NewInMemoryConversationRepository()
+
+	// Option 3: Dual-write for migration
+	// messageRepoInMem := repository.NewInMemoryMessageRepository()
+	// messageRepoCassandra := repository.NewCassandraMessageRepository(cassandraClient)
+	// messageRepo := &DualWriteRepository{
+	//     primary: messageRepoCassandra,
+	//     secondary: messageRepoInMem,
+	// }
+
+	log.Println("✓ Repositories initialized")
+
+	// ============================================================
+	// INITIALIZE SERVICES
+	// ============================================================
+
+	log.Println("Initializing services...")
+
+	messageService := service.NewMessageService(messageRepo)
+	conversationService := service.NewConversationService(conversationRepo, messageRepo)
+
+	log.Println("✓ Services initialized")
+
+	// ============================================================
+	// INITIALIZE HANDLERS
+	// ============================================================
+
+	log.Println("Initializing HTTP handlers...")
+
+	messageHandler := handler.NewMessageHandler(messageService)
+	conversationHandler := handler.NewConversationHandler(conversationService)
+
+	log.Println("✓ Handlers initialized")
+
+	// ============================================================
+	// SETUP ROUTES
+	// ============================================================
+
+	log.Println("Setting up routes...")
+
+	// Health check endpoint
+	engine.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"service": "message",
+			"status":  "ok",
+			"cassandra": gin.H{
+				"connected": cassandraClient != nil,
+			},
+		})
+	})
+
+	// Message routes
+	engine.POST("/messages", messageHandler.CreateMessage)
+	engine.GET("/messages/:id", messageHandler.GetMessage)
+	engine.GET("/messages/conversation/:conversation_id", messageHandler.GetConversationMessages)
+	engine.GET("/messages/user/:user_id", messageHandler.GetUserMessages)
+	engine.PUT("/messages/:id", messageHandler.UpdateMessage)
+	engine.DELETE("/messages/:id", messageHandler.DeleteMessage)
+
+	// Conversation routes
+	engine.POST("/conversations", conversationHandler.CreateConversation)
+	engine.GET("/conversations/:id", conversationHandler.GetConversation)
+	engine.GET("/conversations/user/:user_id", conversationHandler.GetUserConversations)
+	engine.PUT("/conversations/:id", conversationHandler.UpdateConversation)
+	engine.DELETE("/conversations/:id", conversationHandler.DeleteConversation)
+
+	// Conversation member routes
+	engine.POST("/conversations/:id/members", conversationHandler.AddMember)
+	engine.DELETE("/conversations/:conversation_id/members/:user_id", conversationHandler.RemoveMember)
+	engine.GET("/conversations/:id/members", conversationHandler.GetMembers)
+
+	// Or use the router setup function if available
+	// router.SetupRoutes(engine, messageHandler, conversationHandler)
+
+	log.Println("✓ Routes configured")
+
+	// ============================================================
+	// START SERVER
+	// ============================================================
+
+	log.Printf("\n✓ Message Service is running on %s\n", cfg.Server.GetAddr())
+	log.Println("Type: Cassandra-backed")
+	log.Println("\nAvailable endpoints:")
+	log.Println("  POST   /messages")
+	log.Println("  GET    /messages/:id")
+	log.Println("  GET    /messages/conversation/:conversation_id")
+	log.Println("  GET    /messages/user/:user_id")
+	log.Println("  PUT    /messages/:id")
+	log.Println("  DELETE /messages/:id")
+	log.Println("  POST   /conversations")
+	log.Println("  GET    /conversations/:id")
+	log.Println("  GET    /conversations/user/:user_id")
+	log.Println("  PUT    /conversations/:id")
+	log.Println("  DELETE /conversations/:id")
+	log.Println("  POST   /conversations/:id/members")
+	log.Println("  DELETE /conversations/:conversation_id/members/:user_id")
+	log.Println("  GET    /conversations/:id/members")
+	log.Println("  GET    /health")
+
+	if err := engine.Run(cfg.Server.GetAddr()); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
+}
+
+// Example: DualWriteRepository for gradual migration
+/*
+type DualWriteRepository struct {
+	primary   repository.MessageRepository
+	secondary repository.MessageRepository
+}
+
+func (d *DualWriteRepository) Create(ctx context.Context, msg *domain.Message) (*domain.Message, error) {
+	// Write to primary (Cassandra)
+	result, err := d.primary.Create(ctx, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write to secondary (In-Memory) - best effort
+	go func() {
+		if err := d.secondary.Create(ctx, msg); err != nil {
+			log.Printf("Warning: secondary write failed: %v", err)
+		}
+	}()
+
+	return result, nil
+}
+
+func (d *DualWriteRepository) GetByID(ctx context.Context, id gocql.UUID) (*domain.Message, error) {
+	// Read from primary (Cassandra)
+	return d.primary.GetByID(ctx, id)
+}
+
+// ... implement other methods similarly
+*/

@@ -23,14 +23,16 @@ spec:
             - containerPort: 3001
               name: http
           env:
+            - name: CASSANDRA_HOSTS
+              value: cassandra:9042
+            - name: CASSANDRA_KEYSPACE
+              value: message_service
+            - name: CASSANDRA_CONSISTENCY
+              value: LOCAL_ONE
             - name: REDIS_HOST
               value: redis-message
             - name: REDIS_PORT
               value: "6379"
-            - name: CASSANDRA_HOST
-              value: cassandra
-            - name: CASSANDRA_PORT
-              value: "9042"
             - name: NATS_URL
               value: nats://nats:4222
           resources:

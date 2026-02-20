@@ -6,12 +6,13 @@ WORKDIR /app
 # Dépendances
 COPY go.mod go.sum ./
 RUN go mod download
+RUN go mod tidy
 
 # Code source
 COPY . .
 
-# Build
-RUN CGO_ENABLED=0 GOOS=linux go build -o app
+# Build - compile depuis cmd/api/main.go (nouvelle structure)
+RUN CGO_ENABLED=0 GOOS=linux go build -o app ./cmd/api/main.go
 
 # Étape 2 : runtime
 FROM alpine:latest

@@ -1,0 +1,55 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String    @id @default(uuid())
+  phone        String    @unique @db.VarChar(20)
+  username     String    @unique @db.VarChar(50)
+  email        String?   @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  avatarUrl    String?   @map("avatar_url") @db.VarChar(500)
+  about        String?
+  lastSeen     DateTime? @map("last_seen")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  contacts       Contact[]     @relation("UserContacts")
+  contactedBy    Contact[]     @relation("ContactUser")
+  blockedUsers   BlockedUser[] @relation("BlockingUser")
+  blockedByUsers BlockedUser[] @relation("BlockedUser")
+
+  @@map("users")
+}
+
+model Contact {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  contactUserId String   @map("contact_user_id")
+  nickname      String?  @db.VarChar(100)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user        User @relation("UserContacts", fields: [userId], references: [id])
+  contactUser User @relation("ContactUser", fields: [contactUserId], references: [id])
+
+  @@unique([userId, contactUserId])
+  @@map("contacts")
+}
+
+model BlockedUser {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  blockedUserId String   @map("blocked_user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user        User @relation("BlockingUser", fields: [userId], references: [id])
+  blockedUser User @relation("BlockedUser", fields: [blockedUserId], references: [id])
+
+  @@unique([userId, blockedUserId])
+  @@map("blocked_users")
+}

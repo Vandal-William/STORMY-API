@@ -1,0 +1,47 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ReportReason {
+  spam
+  harassment
+  inappropriate
+  fake_account
+  other
+}
+
+enum ReportStatus {
+  pending
+  reviewed
+  resolved
+  dismissed
+}
+
+model Report {
+  id                String       @id @default(uuid())
+  reporterId        String       @map("reporter_id")
+  reportedUserId    String?      @map("reported_user_id")
+  reportedMessageId String?      @map("reported_message_id")
+  conversationId    String?      @map("conversation_id")
+  reason            ReportReason
+  description       String?
+  status            ReportStatus @default(pending)
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  @@map("reports")
+}
+
+model UserBan {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  reason    String?
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("user_bans")
+}

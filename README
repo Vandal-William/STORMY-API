@@ -77,7 +77,47 @@ skaffold version
 ```
 ### Lancer Skaffold
 ```shell
+# Mode développement avec rechargement automatique
 skaffold dev
+
+# Mode développement avec port-forward
+skaffold dev --port-forward
+
+# Mode debug avec breakpoints
+skaffold debug
+
+# Build et déploiement unique (sans watch)
+skaffold run
+
+# Voir les profils disponibles
+skaffold config list-profiles
+
+# Lancer avec un profil spécifique
+skaffold dev -p <profile-name>
+
+# Lancer avec custom namespace
+skaffold dev -n production
+
+# Voir la configuration générée
+skaffold render
+
+# Nettoyer les ressources déployées par Skaffold
+skaffold delete
+```
+
+### Skaffold avec Docker local
+```shell
+# Vérifier que le contexte Docker est correct
+docker context list
+
+# Builder les images avec Skaffold (sans déployer)
+skaffold build
+
+# Builder et push vers un registry
+skaffold build --push
+
+# Voir les tags générés
+skaffold build --dry-run
 ```
 
 ## NOTE: CASSANDRA
@@ -87,6 +127,487 @@ Pour déployer Cassandra manuellement :
 kubectl apply -f k8s/cassandra.yaml
 ```
 Tous les autres services fonctionnent correctement ✅
+
+## TROUBLESHOOTING - PROBLÈMES COURANTS
+
+### Pod reste en CrashLoopBackOff
+```shell
+# 1. Vérifier les logs
+kubectl logs <pod-name> --tail=100
+
+# 2. Voir les événements
+kubectl describe pod <pod-name>
+
+# 3. Vérifier les ressources disponibles
+kubectl top nodes
+kubectl describe node kind-control-plane
+
+# 4. Si c'est Cassandra : augmenter la heap
+# Éditer le deployment et augmenter les limites de mémoire
+kubectl edit deployment cassandra
+```
+
+### Pod reste en Pending
+```shell
+# Vérifier si les ressources sont disponibles
+kubectl describe pod <pod-name>
+
+# Vérifier l'espace disque
+kubectl get pvc
+
+# Nettoyer les vieux pods terminés
+kubectl delete pods --field-selector status.phase=Failed
+kubectl delete pods --field-selector status.phase=Succeeded
+```
+
+### Service ne répond pas
+```shell
+# 1. Vérifier que le service existe
+kubectl get svc <service-name>
+
+# 2. Vérifier les endpoints
+kubectl get endpoints <service-name>
+
+# 3. Tester la DNS interne
+kubectl run -it --rm debug --image=busybox --restart=Never -- nslookup <service-name>
+
+# 4. Vérifier la connectivité du pod
+kubectl exec -it <pod> -- curl http://<service-name>:port
+```
+
+### Erreur de base de données (Postgres)
+```shell
+# 1. Vérifier l'état du pod
+kubectl get pods -l app=postgres
+
+# 2. Vérifier les volumes
+kubectl get pvc postgres-pvc
+kubectl describe pvc postgres-pvc
+
+# 3. Voir les logs
+kubectl logs -l app=postgres
+
+# 4. Vérifier les variables d'environnement
+kubectl describe pod <postgres-pod>
+
+# 5. Réinitialiser la base (supprime toutes les données)
+kubectl delete pvc postgres-pvc
+kubectl delete pod -l app=postgres
+kubectl apply -f k8s/postgres.yaml
+```
+
+### Erreur de connexion Redis
+```shell
+# 1. Vérifier que Redis fonctionne
+kubectl port-forward svc/redis-user 6379:6379
+redis-cli ping
+
+# 2. Vérifier les données persévérent
+kubectl describe pvc redis-user-pvc
+
+# 3. Entrer dans le pod Redis
+kubectl exec -it <redis-pod> -- redis-cli
+
+# 4. Vérifier la mémoire utilisée
+kubectl exec -it <redis-pod> -- redis-cli info memory
+```
+
+### Problème avec Cassandra
+```shell
+# 1. Vérifier le statut
+kubectl exec -it <cassandra-pod> -- nodetool status
+
+# 2. Vérifier la heap
+kubectl exec -it <cassandra-pod> -- nodetool info
+
+# 3. Voir les logs complets
+kubectl logs <cassandra-pod>
+
+# 4. Si ça ne marche pas, recréer :
+kubectl delete deployment cassandra
+kubectl delete pvc cassandra-pvc
+sleep 30
+kubectl apply -f k8s/cassandra.yaml
+```
+
+### Problème avec NATS
+```shell
+# 1. Vérifier la connexion
+kubectl port-forward svc/nats 4222:4222
+nats --version
+
+# 2. Voir le statut du serveur
+kubectl exec -it <nats-pod> -- nats-server -v
+
+# 3. Logs
+kubectl logs <nats-pod>
+
+# 4. Vérifier la config
+kubectl get configmap nats-config -o yaml
+```
+
+### ImagePullBackOff
+```shell
+# 1. Vérifier que l'image existe
+docker images | grep service-name
+
+# 2. Charger l'image dans KIND
+kind load docker-image <image-name>:<tag>
+
+# 3. Vérifier l'imagePullPolicy
+kubectl get pods <pod> -o yaml | grep imagePullPolicy
+
+# 4. Rebuilder l'image
+docker build -t <service-name>:dev ./services/<service-name>
+kind load docker-image <service-name>:dev
+kubectl rollout restart deployment <service-name>
+```
+
+### Problème de port / Port déjà utilisé
+```shell
+# 1. Vérifier les ports en écoute
+netstat -tuln | grep LISTEN
+
+# 2. Tuer le processus qui utilise le port
+lsof -i :8080
+kill -9 <PID>
+
+# 3. Utiliser port-forward au lieu de NodePort
+kubectl port-forward svc/gateway 8081:8080
+```
+
+### Erreur "Too many open files"
+```shell
+# 1. Voir la limite actuelle
+ulimit -n
+
+# 2. L'augmenter
+ulimit -n 65535
+
+# 3. Rendre permanent (éditer /etc/security/limits.conf)
+echo "* soft nofile 65535" | sudo tee -a /etc/security/limits.conf
+echo "* hard nofile 65535" | sudo tee -a /etc/security/limits.conf
+```
+
+### Générer des logs détaillés
+```shell
+# Logs avec trace complète
+kubectl logs <pod> -v=10
+
+# Voir tous les événements du namespace
+kubectl get events -n default -o wide
+
+# Voir les événements en temps réel
+kubectl get events -n default -w
+
+# Voir les logs de plusieurs pods
+kubectl logs -l app=user-service -f --max-log-requests=10
+```
+
+### Récupérer une sauvegarde d'une base
+```shell
+# Postgres
+kubectl exec -it <postgres-pod> -- pg_dump -U postgres app > backup.sql
+
+# Redis (dump)
+kubectl exec -it <redis-pod> -- redis-cli BGSAVE
+kubectl cp default/<redis-pod>:/data/dump.rdb ./dump.rdb
+
+# Cassandra (snapshot)
+kubectl exec -it <cassandra-pod> -- nodetool snapshot
+```
+
+### Nettoyer complètement et recommencer
+```shell
+# 1. Supprimer le cluster
+kind delete cluster
+
+# 2. Recréer le cluster
+kind create cluster
+
+# 3. Redéployer tout
+docker build -t gateway:dev ./services/gateway
+docker build -t user-service:dev ./services/user
+docker build -t message-service:dev ./services/message
+docker build -t presence-service:dev ./services/presence
+docker build -t notification-service:dev ./services/notification
+docker build -t moderation-service:dev ./services/moderation
+
+kind load docker-image gateway:dev
+kind load docker-image user-service:dev
+kind load docker-image message-service:dev
+kind load docker-image presence-service:dev
+kind load docker-image notification-service:dev
+kind load docker-image moderation-service:dev
+
+kubectl apply -f k8s/
+```
+
+## VARIABLES D'ENVIRONNEMENT ET SECRETS
+
+### Gérer les secrets en production
+```shell
+# Créer un secret à partir d'un fichier
+kubectl create secret generic db-credentials --from-file=credentials.txt
+
+# Créer un secret TLS
+kubectl create secret tls tls-secret --cert=path/to/tls.crt --key=path/to/tls.key
+
+# Créer un secret Docker registry
+kubectl create secret docker-registry regcred \
+  --docker-server=<your-registry-server> \
+  --docker-username=<your-name> \
+  --docker-password=<your-pword> \
+  --docker-email=<your-email>
+
+# Vérifier les secrets
+kubectl get secrets
+
+# Éditer un secret
+kubectl edit secret jwt-secret
+
+# Supprimer un secret
+kubectl delete secret jwt-secret
+
+# Voir la valeur d'un secret
+kubectl get secret jwt-secret -o jsonpath='{.data.secret}' | base64 -d
+```
+
+### Gérer les ConfigMaps
+```shell
+# Créer une configmap à partir d'un fichier
+kubectl create configmap app-config --from-file=config.yaml
+
+# Créer une configmap à partir d'une clé-valeur
+kubectl create configmap app-config --from-literal=ENVIRONMENT=production
+
+# Créer depuis un dossier
+kubectl create configmap app-config --from-file=./config/
+
+# Éditer une configmap
+kubectl edit configmap nats-config
+
+# Voir une configmap
+kubectl get configmap nats-config -o yaml
+```
+
+### Variables d'environnement des services
+```
+# Gateway
+USER_SERVICE_URL=http://user-service:3000
+MESSAGE_SERVICE_URL=http://message-service:3001
+PRESENCE_SERVICE_URL=http://presence-service:3002
+NOTIFICATION_SERVICE_URL=http://notification-service:3003
+MODERATION_SERVICE_URL=http://moderation-service:3004
+NATS_URL=nats://nats:4222
+
+# User Service
+DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app
+REDIS_HOST=redis-user
+REDIS_PORT=6379
+JWT_SECRET=dev-secret-change-in-production
+
+# Message Service
+REDIS_HOST=redis-message
+REDIS_PORT=6379
+CASSANDRA_HOST=cassandra
+CASSANDRA_PORT=9042
+NATS_URL=nats://nats:4222
+
+# Presence Service
+REDIS_HOST=redis-user
+REDIS_PORT=6379
+
+# Notification Service
+DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app
+NATS_URL=nats://nats:4222
+
+# Moderation Service
+DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app
+NATS_URL=nats://nats:4222
+
+# Postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=app
+```
+
+## BONNES PRATIQUES
+
+### 1️⃣ Avant de Commit
+```shell
+# Vérifier la syntaxe YAML
+yamllint k8s/
+
+# Valider les manifests Kubernetes
+kubectl apply -f k8s/ --dry-run=client -o yaml
+
+# Vérifier les images utilisées
+grep "image:" k8s/*.yaml
+
+# Tester localement
+skaffold render
+
+# Vérifier les logs avant commit
+kubectl logs -l app=gateway
+```
+
+### 2️⃣ Gestion des versions
+```shell
+# Voir l'historique des déploiements
+kubectl rollout history deployment user-service
+
+# Voir les changements d'une révision
+kubectl rollout history deployment user-service --revision=2
+
+# Revenir à une version antérieure
+kubectl rollout undo deployment user-service --to-revision=1
+
+# Voir le statut du rollback
+kubectl rollout status deployment user-service
+```
+
+### 3️⃣ Optimisation mémoire/CPU
+```shell
+# Modifier les limits d'un deployment
+kubectl set resources deployment user-service \
+  --limits=cpu=500m,memory=512Mi \
+  --requests=cpu=100m,memory=256Mi
+
+# Voir les ressources actuelles
+kubectl get deployment user-service -o yaml | grep -A10 resources
+
+# Monitor la consommation
+watch kubectl top pods
+```
+
+### 4️⃣ Scaling et réplication
+```shell
+# Augmenter les replicas
+kubectl scale deployment gateway --replicas=3
+
+# Scaler automatiquement (HPA)
+kubectl autoscale deployment user-service --min=2 --max=5 --cpu-percent=80
+
+# Voir HPA
+kubectl get hpa
+
+# Éditer HPA
+kubectl edit hpa user-service
+```
+
+### 5️⃣ Sauvegardes et restauration
+```shell
+# Backup complet du cluster
+kubectl get all -A -o yaml > cluster-backup.yaml
+
+# Backup d'un namespace
+kubectl get all -n default -o yaml > default-namespace-backup.yaml
+
+# Backup d'une ressource
+kubectl get deployment user-service -o yaml > user-deployment-backup.yaml
+
+# Restaurer depuis backup
+kubectl apply -f cluster-backup.yaml
+
+# Voir les changements avant restore
+kubectl apply -f cluster-backup.yaml --dry-run=client
+```
+
+### 6️⃣ Monitoring et alertes
+```shell
+# Voir les ressources en temps réel
+watch kubectl get pods
+
+# Voir les métriques détaillées
+kubectl top nodes --show-capacity
+
+# Voir l'utilisation d'un pod spécifique
+kubectl top pod <pod-name> --containers
+
+# Logs en continu avec timestamps
+kubectl logs -f <pod> --timestamps=true
+
+# Voir les erreurs dans les logs
+kubectl logs <pod> --grep="ERROR"
+```
+
+### 7️⃣ Sécurité
+```shell
+# Voir les secrets en cours
+kubectl get secrets
+
+# Vérifier les RBAC
+kubectl get serviceaccount
+
+# Voir les règles RBAC
+kubectl get rolebindings
+
+# Audit
+kubectl get events --sort-by='.lastTimestamp'
+```
+
+## POINTS IMPORTANTS À RETENIR
+
+✅ **Accès aux Interfaces Web**
+
+**Grafana:**
+- Via NodePort: http://localhost:30009
+- Via port-forward: `kubectl port-forward svc/grafana 3000:3000` → http://localhost:3000
+- Identifiants: `admin` / `admin-change-in-production`
+
+**Gateway API:**
+- Via NodePort: http://localhost:30080
+- Via port-forward: `kubectl port-forward svc/gateway 8080:8080` → http://localhost:8080
+
+**NATS Monitoring:**
+- Via port-forward: `kubectl port-forward svc/nats 8222:8222` → http://localhost:8222
+
+**Postgres (Terminal):**
+- `kubectl port-forward svc/postgres 5432:5432`
+- Puis: `psql -h localhost -U postgres -d app`
+- Mot de passe: `postgres`
+
+**Redis User (Terminal):**
+- `kubectl port-forward svc/redis-user 6379:6379`
+- Puis: `redis-cli -h localhost`
+
+**Redis Message (Terminal):**
+- `kubectl port-forward svc/redis-message 6380:6379`
+- Puis: `redis-cli -h localhost -p 6380`
+
+✅ **Persistance des données**
+- Postgres utilise `postgres-pvc` (10Gi)
+- Cassandra utilise `cassandra-pvc` (10Gi)
+- Redis-user utilise `redis-user-pvc` (1Gi)
+- Redis-message utilise `redis-message-pvc` (1Gi)
+
+✅ **Networking**
+- Les services utilisent DNS interne Kubernetes
+- Gateway NodePort: 30080
+- Grafana NodePort: 30009
+
+✅ **Secrets**
+- JWT secret: `dev-secret-change-in-production`
+- Postgres: `postgres:postgres`
+- Grafana: `admin-change-in-production`
+
+✅ **Resources**
+- Cassandra: 512Mi RAM, 250m CPU
+- Postgres: Par défaut
+- Redis: 128Mi RAM
+- Autres services: 256-512Mi RAM
+
+✅ **Commandes essentielles à retenir**
+```shell
+kubectl apply -f k8s/                    # Déployer
+kubectl get pods                         # Voir les pods
+kubectl logs <pod>                       # Voir les logs
+kubectl describe pod <pod>              # Diagnostiquer
+kubectl port-forward svc/<svc> 8080:8080 # Accès local
+skaffold dev --port-forward             # Développement
+kubectl rollout restart deployment <dep> # Redémarrer
+```
 ## SUPPRIMER ET RECRÉER LES PODS
 
 ### Supprimer tous les pods
@@ -110,16 +631,283 @@ kubectl rollout restart deployment --all
 ```
 ## AUTRE COMMANDES
 
-### Si un Pod n’est PAS Running
+### Accéder aux Services via Port-Forward
 ```shell
+# Accéder à la Gateway
+kubectl port-forward svc/gateway 8080:8080
+
+# Accéder à Grafana
+kubectl port-forward svc/grafana 3000:3000
+
+# Accéder à NATS monitoring
+kubectl port-forward svc/nats 8222:8222
+
+# Accéder à Postgres
+kubectl port-forward svc/postgres 5432:5432
+
+# Accéder à Redis user
+kubectl port-forward svc/redis-user 6379:6379
+
+# Accéder à Redis message
+kubectl port-forward svc/redis-message 6380:6379
+```
+
+### Vérifier les PersistentVolumes et PersistentVolumeClaims
+```shell
+# Lister les Persistent Volumes
+kubectl get pv
+
+# Lister les Persistent Volume Claims
+kubectl get pvc
+
+# Vérifier le statut d'une PVC
+kubectl describe pvc postgres-pvc
+kubectl describe pvc cassandra-pvc
+kubectl describe pvc redis-user-pvc
+kubectl describe pvc redis-message-pvc
+```
+
+### Monitorer et Déboguer
+```shell
+# Voir tous les pods avec leurs IPs
+kubectl get pods -o wide
+
+# Voir les événements du cluster
+kubectl get events -n default
+
+# Voir les ressources utilisées
+kubectl top nodes
+kubectl top pods
+
+# Logs temps réel d'un pod
+kubectl logs -f <nom-du-pod>
+
+# Logs des X dernières lignes
+kubectl logs <nom-du-pod> --tail=50
+
+# Logs depuis les X dernières secondes
+kubectl logs <nom-du-pod> --since=5m
+
+# Entrer dans un pod (bash/shell)
+kubectl exec -it <nom-du-pod> -- /bin/bash
+
+# Copier un fichier depuis un pod
+kubectl cp <namespace>/<pod>:<path> <local-path>
+
+# Copier un fichier vers un pod
+kubectl cp <local-path> <namespace>/<pod>:<path>
+```
+
+### Vérifier la Configurations des Services
+```shell
+# Voir les endpoints d'un service
+kubectl get endpoints <service-name>
+
+# Vérifier la configuration DNS interne
+kubectl run -it --rm debug --image=busybox --restart=Never -- sh
+# À l'intérieur du container :
+nslookup postgres
+nslookup cassandra
+nslookup redis-user
+```
+
+### Tests de Connectivité
+```shell
+# Tester la connexion à Postgres depuis un pod
+kubectl exec -it <pod> -- psql -h postgres -U postgres -d app
+
+# Tester la connexion à Redis
+kubectl exec -it <redis-pod> -- redis-cli ping
+
+# Tester la connexion à Cassandra
+kubectl exec -it <cassandra-pod> -- nodetool status
+
+# Tester NATS
+kubectl exec -it <nats-pod> -- nats-server -v
+```
+
+### Mettre à Jour les Secrets
+```shell
+# Créer un secret
+kubectl create secret generic my-secret --from-literal=key=value
+
+# Mise à jour d'un secret existant
+kubectl delete secret jwt-secret
+kubectl create secret generic jwt-secret --from-literal=secret=new-secret-value
+
+# Vérifier les secrets
+kubectl get secrets
+
+# Voir le contenu d'un secret (base64 décrypté)
+kubectl get secret jwt-secret -o jsonpath='{.data.secret}' | base64 -d
+```
+
+### Gérer les Configmaps
+```shell
+# Lister les configmaps
+kubectl get configmap
+
+# Vérifier une configmap
+kubectl describe configmap nats-config
+
+# Voir le contenu brut
+kubectl get configmap nats-config -o yaml
+
+# Modifier une configmap
+kubectl edit configmap nats-config
+```
+
+### Redéploiement et Mises à Jour
+```shell
+# Restart un déploiement spécifique
+kubectl rollout restart deployment user-service
+
+# Voir l'historique des déploiements
+kubectl rollout history deployment user-service
+
+# Revenir à une version antérieure
+kubectl rollout undo deployment user-service
+
+# Scaler un déploiement (augmenter/diminuer les replicas)
+kubectl scale deployment user-service --replicas=3
+
+# Vérifier le statut du rollout
+kubectl rollout status deployment user-service
+```
+
+### Nettoyer les Ressources
+```shell
+# Supprimer un pod
+kubectl delete pod <nom-du-pod>
+
+# Supprimer un déploiement
+kubectl delete deployment user-service
+
+# Supprimer un service
+kubectl delete service user-service
+
+# Supprimer une PVC
+kubectl delete pvc postgres-pvc
+
+# Supprimer toutes les ressources d'un namespace
+kubectl delete all --all
+
+# Supprimer étiquetées par label
+kubectl delete pods -l app=user-service
+```
+
+### Appliquer des Configurations
+```shell
+# Appliquer un fichier YAML
+kubectl apply -f k8s/user.yaml
+
+# Appliquer tous les fichiers d'un dossier
+kubectl apply -f k8s/
+
+# Appliquer et voir les changements
+kubectl apply -f k8s/user.yaml --dry-run=client -o yaml
+
+# Forcer l'application (supprimer et recréer)
+kubectl replace -f k8s/user.yaml --force
+```
+
+### Status et Informations
+```shell
+# Voir les infos du cluster
+kubectl cluster-info
+
+# Voir les nodes disponibles
+kubectl get nodes -o wide
+
+# Voir les namespaces
+kubectl get namespaces
+
+# Changer le namespace par défaut
+kubectl config set-context --current --namespace=default
+
+# Voir la configuration actuelle
+kubectl config view
+
+# Décrire une ressource
+kubectl describe deployment user-service
 kubectl describe pod <nom-du-pod>
+kubectl describe svc user-service
 ```
-### Voir les logs
+
+### Tester les Endpoints
 ```shell
-kubectl logs <nom-du-pod>
+# Tester la Gateway depuis un pod
+kubectl run -it --rm test --image=curlimages/curl --restart=Never -- \
+  curl http://gateway:8080/info
+
+# Tester les services intemes
+kubectl run -it --rm test --image=nicolaka/netshoot --restart=Never -- bash
+# À l'intérieur :
+curl http://user-service:3000/info
+curl http://message-service:3001/info
+curl http://notification-service:3003/info
 ```
-### Vérifier les Services
+
+### Optimisation et Performance
 ```shell
+# Voir les ressources utilisées en détail
+kubectl describe node kind-control-plane
+
+# Vérifier les limits des pods
+kubectl get pods -o custom-columns=NAME:.metadata.name,CPU_REQ:.spec.containers[*].resources.requests.cpu,CPU_LIMIT:.spec.containers[*].resources.limits.cpu
+
+# Voir les événements critiques
+kubectl get events --sort-by='.lastTimestamp' -n default
+
+# Diagnostiquer un pod qui crashe
+kubectl describe pod <pod-name> # Voir les Events
+kubectl logs <pod-name> --previous # Voir les logs avant crash
+```
+
+### Backup et Export
+```shell
+# Exporter toutes les ressources
+kubectl get all -o yaml > backup.yaml
+
+# Exporter un deployment
+kubectl get deployment user-service -o yaml > user-deployment.yaml
+
+# Exporter une PVC
+kubectl get pvc postgres-pvc -o yaml > postgres-pvc.yaml
+
+# Récupérer les données du volume
+kubectl cp default/<pod>:/var/lib/postgresql/data ./postgres-backup/
+```
+
+### Gestion des Ressources
+```shell
+# Créer une ressource depuis kubectl
+kubectl create deployment nginx --image=nginx
+
+# Éditer une ressource
+kubectl edit deployment user-service
+
+# Patch une ressource (modification partielle)
+kubectl patch deployment user-service -p '{"spec":{"replicas":3}}'
+
+# Annotate une ressource
+kubectl annotate pods <pod-name> key=value --overwrite
+```
+
+### Monitoring et Logs Avancés
+```shell
+# Voir les logs avec timestamps
+kubectl logs <pod> --timestamps=true
+
+# Voir les logs de tous les pods d'une app
+kubectl logs -l app=user-service --all-containers=true
+
+# Voir les logs en streaming depuis plusieurs pods
+kubectl logs -l app=user-service -f
+
+# Voir les logs d'un conteneur précédent (avant crash)
+kubectl logs <pod> --container=<container> --previous
+```
 kubectl get svc
 
 ```

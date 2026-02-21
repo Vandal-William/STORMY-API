@@ -1,20 +1,20 @@
-package main
-
-import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
-)
-
-func main() {
-	r := gin.Default()
-
-	r.GET("/info", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"service": "message",
-			"status":  "ok",
-		})
-	})
-
-	r.Run(":3001")
-}
+// This file has been migrated to cmd/api/main.go
+// Use "go run ./cmd/api/main.go" or "make run" to start the service
+//
+// New project structure:
+// - cmd/api/            - Application entry point
+// - internal/config/    - Configuration management
+// - internal/handler/   - HTTP request handlers
+// - internal/service/   - Business logic
+// - internal/router/    - Route definitions
+// - internal/repository/- Data access layer
+// - internal/domain/    - Domain models
+// - pkg/errors/         - Error types
+// - tests/              - Test files
+//
+// To build and run:
+//   make build
+//   make run
+//
+// To run tests:
+//   make test

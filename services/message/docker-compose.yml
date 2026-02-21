@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra-dev
+    ports:
+      - "9042:9042"
+      - "7199:7199"
+    environment:
+      CASSANDRA_CLUSTER_NAME: "message-cluster"
+      CASSANDRA_DC: "datacenter1"
+      CASSANDRA_RACK: "rack1"
+      CASSANDRA_LISTEN_ADDRESS: "0.0.0.0"
+      HEAP_NEWSIZE: "128M"
+      MAX_HEAP_SIZE: "256M"
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "describe cluster" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - message-network
+
+  message-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: message-service-dev
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "3001"
+      HOST: "0.0.0.0"
+      CASSANDRA_HOSTS: "cassandra"
+      CASSANDRA_PORT: "9042"
+      CASSANDRA_KEYSPACE: "message_service"
+      CASSANDRA_CONSISTENCY: "LOCAL_ONE"
+      CASSANDRA_TIMEOUT: "10"
+      CASSANDRA_CONNECT_TIMEOUT: "10"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      NATS_URL: "nats://nats:4222"
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    volumes:
+      - .:/app
+    networks:
+      - message-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-dev
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - message-network
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: nats-dev
+    ports:
+      - "4222:4222"
+      - "6222:6222"
+      - "8222:8222"
+    networks:
+      - message-network
+
+volumes:
+  cassandra-data:
+
+networks:
+  message-network:
+    driver: bridge

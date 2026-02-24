@@ -5,7 +5,9 @@ import {
   Body,
   UseGuards,
   Request,
+  Res,
 } from '@nestjs/common';
+import express from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -16,13 +18,39 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: express.Response,
+  ) {
+    const { access_token } = await this.authService.register(dto);
+    res.cookie('ACCESS_TOKEN', access_token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+    return { message: 'registered' };
   }
 
   @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: express.Response,
+  ) {
+    const { access_token } = await this.authService.login(dto);
+    res.cookie('ACCESS_TOKEN', access_token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+    return { message: 'logged in' };
+  }
+
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: express.Response) {
+    res.clearCookie('ACCESS_TOKEN');
+    return { message: 'logged out' };
   }
 
   @UseGuards(JwtAuthGuard)

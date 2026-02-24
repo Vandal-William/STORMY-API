@@ -4,43 +4,56 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly REFRESH_TOKEN_EXPIRY_DAYS = 7;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
   ) {}
 
   async register(dto: RegisterDto) {
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ phone: dto.phone }, { username: dto.username }],
-      },
-    });
-
-    if (existingUser) {
-      throw new ConflictException('Phone number or username already taken');
-    }
-
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    const user = await this.prisma.user.create({
-      data: {
-        phone: dto.phone,
-        username: dto.username,
-        passwordHash: hashedPassword,
-        email: dto.email,
-      },
-    });
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          phone: dto.phone,
+          username: dto.username,
+          passwordHash: hashedPassword,
+          email: dto.email,
+        },
+      });
 
-    return {
-      access_token: this.generateToken(user.id, user.username),
-    };
+      const accessToken = this.generateToken(user.id, user.username);
+      const refreshToken = this.generateRefreshToken();
+      await this.storeRefreshToken(user.id, refreshToken);
+
+      return { access_token: accessToken, refresh_token: refreshToken };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const target = error.meta?.target as string[] | undefined;
+        if (target?.includes('phone')) {
+          throw new ConflictException('Phone number already taken');
+        }
+        if (target?.includes('username')) {
+          throw new ConflictException('Username already taken');
+        }
+        throw new ConflictException('Phone number or username already taken');
+      }
+      throw error;
+    }
   }
 
   async login(dto: LoginDto) {
@@ -58,9 +71,42 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    const accessToken = this.generateToken(user.id, user.username);
+    const refreshToken = this.generateRefreshToken();
+    await this.storeRefreshToken(user.id, refreshToken);
+
+    return { access_token: accessToken, refresh_token: refreshToken };
+  }
+
+  async refreshAccessToken(refreshToken: string) {
+    const storedToken = await this.prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+      include: { user: true },
+    });
+
+    if (!storedToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (storedToken.expiresAt < new Date()) {
+      await this.prisma.refreshToken.delete({ where: { id: storedToken.id } });
+      throw new UnauthorizedException('Refresh token expired');
+    }
+
     return {
-      access_token: this.generateToken(user.id, user.username),
+      access_token: this.generateToken(
+        storedToken.user.id,
+        storedToken.user.username,
+      ),
     };
+  }
+
+  async logout(refreshToken?: string) {
+    if (refreshToken) {
+      await this.prisma.refreshToken.deleteMany({
+        where: { token: refreshToken },
+      });
+    }
   }
 
   async getProfile(userId: string) {
@@ -87,5 +133,18 @@ export class AuthService {
 
   private generateToken(userId: string, username: string): string {
     return this.jwtService.sign({ sub: userId, username });
+  }
+
+  private generateRefreshToken(): string {
+    return randomBytes(64).toString('hex');
+  }
+
+  private async storeRefreshToken(userId: string, token: string) {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + this.REFRESH_TOKEN_EXPIRY_DAYS);
+
+    await this.prisma.refreshToken.create({
+      data: { token, userId, expiresAt },
+    });
   }
 }

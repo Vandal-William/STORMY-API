@@ -32,6 +32,7 @@ Crée un nouvel utilisateur et pose les 2 cookies (access + refresh).
 **Rate limit : 3 requêtes / minute**
 
 **Body :**
+
 ```json
 {
   "phone": "0612345678",
@@ -42,17 +43,20 @@ Crée un nouvel utilisateur et pose les 2 cookies (access + refresh).
 ```
 
 **Réponse 201 :**
+
 ```json
 { "message": "registered" }
 ```
 
 **Headers Set-Cookie :**
+
 ```
 ACCESS_TOKEN=eyJ...; Max-Age=900; Path=/; HttpOnly; SameSite=Lax
 REFRESH_TOKEN=5d262a...; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax
 ```
 
 **Erreurs :**
+
 - `409 Conflict` : "Phone number already taken" / "Username already taken"
 - `429 Too Many Requests` : rate limit dépassé
 
@@ -65,6 +69,7 @@ Authentifie un utilisateur existant et pose les 2 cookies.
 **Rate limit : 5 requêtes / minute**
 
 **Body :**
+
 ```json
 {
   "username": "monuser",
@@ -73,11 +78,13 @@ Authentifie un utilisateur existant et pose les 2 cookies.
 ```
 
 **Réponse 201 :**
+
 ```json
 { "message": "logged in" }
 ```
 
 **Erreurs :**
+
 - `401 Unauthorized` : identifiants invalides
 - `429 Too Many Requests` : rate limit dépassé
 
@@ -92,16 +99,19 @@ Renouvelle l'access token en utilisant le refresh token. Appelé quand l'access 
 **Prérequis :** cookie `REFRESH_TOKEN` présent
 
 **Réponse 201 :**
+
 ```json
 { "message": "token refreshed" }
 ```
 
 **Header Set-Cookie :**
+
 ```
 ACCESS_TOKEN=eyJ...; Max-Age=900; Path=/; HttpOnly; SameSite=Lax
 ```
 
 **Erreurs :**
+
 - `401 Unauthorized` : refresh token absent, invalide ou expiré
 
 ---
@@ -111,6 +121,7 @@ ACCESS_TOKEN=eyJ...; Max-Age=900; Path=/; HttpOnly; SameSite=Lax
 Retourne le profil de l'utilisateur connecté. Nécessite le cookie `ACCESS_TOKEN` valide.
 
 **Réponse 200 :**
+
 ```json
 {
   "id": "uuid",
@@ -125,6 +136,7 @@ Retourne le profil de l'utilisateur connecté. Nécessite le cookie `ACCESS_TOKE
 ```
 
 **Erreurs :**
+
 - `401 Unauthorized` : cookie absent ou token invalide/expiré
 
 ---
@@ -134,6 +146,7 @@ Retourne le profil de l'utilisateur connecté. Nécessite le cookie `ACCESS_TOKE
 Supprime les 2 cookies et invalide le refresh token en base de données.
 
 **Réponse 201 :**
+
 ```json
 { "message": "logged out" }
 ```

@@ -1,0 +1,709 @@
+{
+  "info": {
+    "name": "Stormy - Nest API",
+    "description": "Collection complète de tous les services NestJS : User Service (Auth, Profile, Contacts, Blocked), Moderation Service (Reports, Bans) et Notification Service (Notifications, Settings)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "userServiceUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "moderationServiceUrl", "value": "http://localhost:3004", "type": "string" },
+    { "key": "notificationServiceUrl", "value": "http://localhost:3003", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "user2Id", "value": "", "type": "string" },
+    { "key": "contactId", "value": "", "type": "string" },
+    { "key": "blockedId", "value": "", "type": "string" },
+    { "key": "reportId", "value": "", "type": "string" },
+    { "key": "banId", "value": "", "type": "string" },
+    { "key": "notificationId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "User Service - Auth",
+      "description": "Authentification (port 3000) - Register, Login, Refresh, Logout",
+      "item": [
+        {
+          "name": "Register",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('Message registered', () => pm.expect(pm.response.json().message).to.eql('registered'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"0612345678\",\n  \"username\": \"testuser\",\n  \"password\": \"Password1@\",\n  \"email\": \"test@mail.com\"\n}" },
+            "url": { "raw": "{{userServiceUrl}}/auth/register", "host": ["{{userServiceUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Register User 2 (for contacts tests)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"0698765432\",\n  \"username\": \"user2\",\n  \"password\": \"Password1@\"\n}" },
+            "url": { "raw": "{{userServiceUrl}}/auth/register", "host": ["{{userServiceUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('Message logged in', () => pm.expect(pm.response.json().message).to.eql('logged in'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"Password1@\"\n}" },
+            "url": { "raw": "{{userServiceUrl}}/auth/login", "host": ["{{userServiceUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{userServiceUrl}}/auth/refresh", "host": ["{{userServiceUrl}}"], "path": ["auth", "refresh"] }
+          }
+        },
+        {
+          "name": "Get Auth Me",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has username', () => pm.expect(pm.response.json()).to.have.property('username'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{userServiceUrl}}/auth/me", "host": ["{{userServiceUrl}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{userServiceUrl}}/auth/logout", "host": ["{{userServiceUrl}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Service - Profile",
+      "description": "Gestion du profil (port 3000) - CRUD profil utilisateur",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Has full profile fields', () => {",
+            "  pm.expect(json).to.have.property('id');",
+            "  pm.expect(json).to.have.property('phone');",
+            "  pm.expect(json).to.have.property('username');",
+            "});",
+            "pm.test('No passwordHash', () => pm.expect(json).to.not.have.property('passwordHash'));",
+            "pm.collectionVariables.set('userId', json.id);"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{userServiceUrl}}/profile/me", "host": ["{{userServiceUrl}}"], "path": ["profile", "me"] }
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('About updated', () => pm.expect(pm.response.json().about).to.eql('Hello Stormy'));"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"about\": \"Hello Stormy\"\n}" },
+            "url": { "raw": "{{userServiceUrl}}/profile/me", "host": ["{{userServiceUrl}}"], "path": ["profile", "me"] }
+          }
+        },
+        {
+          "name": "Search Users",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Has pagination', () => {",
+            "  pm.expect(json).to.have.property('data');",
+            "  pm.expect(json).to.have.property('total');",
+            "  pm.expect(json).to.have.property('totalPages');",
+            "});",
+            "if (json.data.length > 0) {",
+            "  const user2 = json.data.find(u => u.username === 'user2');",
+            "  if (user2) pm.collectionVariables.set('user2Id', user2.id);",
+            "}"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{userServiceUrl}}/profile/search?username=user2",
+              "host": ["{{userServiceUrl}}"], "path": ["profile", "search"],
+              "query": [{ "key": "username", "value": "user2" }]
+            }
+          }
+        },
+        {
+          "name": "Get User By ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Public profile only', () => {",
+            "  pm.expect(json).to.have.property('username');",
+            "  pm.expect(json).to.not.have.property('email');",
+            "  pm.expect(json).to.not.have.property('phone');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{userServiceUrl}}/profile/{{user2Id}}", "host": ["{{userServiceUrl}}"], "path": ["profile", "{{user2Id}}"] }
+          }
+        },
+        {
+          "name": "Delete My Account",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Deleted', () => pm.expect(pm.response.json().deleted).to.eql(true));"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{userServiceUrl}}/profile/me", "host": ["{{userServiceUrl}}"], "path": ["profile", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Service - Contacts",
+      "description": "Gestion des contacts (port 3000)",
+      "item": [
+        {
+          "name": "Add Contact",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "const json = pm.response.json();",
+            "pm.test('Has contactUser info', () => {",
+            "  pm.expect(json).to.have.property('contactUser');",
+            "  pm.expect(json.contactUser).to.have.property('username');",
+            "});",
+            "pm.collectionVariables.set('contactId', json.id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"contactUserId\": \"{{user2Id}}\",\n  \"nickname\": \"Mon pote\"\n}" },
+            "url": { "raw": "{{userServiceUrl}}/contacts", "host": ["{{userServiceUrl}}"], "path": ["contacts"] }
+          }
+        },
+        {
+          "name": "Add Self (should fail 400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"contactUserId\": \"{{userId}}\"\n}" },
+            "url": { "raw": "{{userServiceUrl}}/contacts", "host": ["{{userServiceUrl}}"], "path": ["contacts"] }
+          }
+        },
+        {
+          "name": "Add Duplicate (should fail 409)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 409', () => pm.response.to.have.status(409));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"contactUserId\": \"{{user2Id}}\"\n}" },
+            "url": { "raw": "{{userServiceUrl}}/contacts", "host": ["{{userServiceUrl}}"], "path": ["contacts"] }
+          }
+        },
+        {
+          "name": "List My Contacts",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Has pagination', () => pm.expect(json).to.have.property('data'));",
+            "pm.test('Has contacts', () => pm.expect(json.data.length).to.be.greaterThan(0));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{userServiceUrl}}/contacts?page=1&limit=20",
+              "host": ["{{userServiceUrl}}"], "path": ["contacts"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }]
+            }
+          }
+        },
+        {
+          "name": "Update Contact Nickname",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Nickname updated', () => pm.expect(pm.response.json().nickname).to.eql('Best friend'));"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nickname\": \"Best friend\"\n}" },
+            "url": { "raw": "{{userServiceUrl}}/contacts/{{contactId}}", "host": ["{{userServiceUrl}}"], "path": ["contacts", "{{contactId}}"] }
+          }
+        },
+        {
+          "name": "Delete Contact",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Deleted', () => pm.expect(pm.response.json().deleted).to.eql(true));"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{userServiceUrl}}/contacts/{{contactId}}", "host": ["{{userServiceUrl}}"], "path": ["contacts", "{{contactId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Service - Blocked Users",
+      "description": "Gestion des utilisateurs bloques (port 3000)",
+      "item": [
+        {
+          "name": "Block User",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "const json = pm.response.json();",
+            "pm.test('Has blockedUser info', () => pm.expect(json).to.have.property('blockedUser'));",
+            "pm.collectionVariables.set('blockedId', json.id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"blockedUserId\": \"{{user2Id}}\"\n}" },
+            "url": { "raw": "{{userServiceUrl}}/contacts/blocked", "host": ["{{userServiceUrl}}"], "path": ["contacts", "blocked"] }
+          }
+        },
+        {
+          "name": "Block Self (should fail 400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"blockedUserId\": \"{{userId}}\"\n}" },
+            "url": { "raw": "{{userServiceUrl}}/contacts/blocked", "host": ["{{userServiceUrl}}"], "path": ["contacts", "blocked"] }
+          }
+        },
+        {
+          "name": "Add Blocked as Contact (should fail 400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"contactUserId\": \"{{user2Id}}\"\n}" },
+            "url": { "raw": "{{userServiceUrl}}/contacts", "host": ["{{userServiceUrl}}"], "path": ["contacts"] }
+          }
+        },
+        {
+          "name": "List Blocked Users",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Has pagination', () => pm.expect(json).to.have.property('data'));",
+            "pm.test('Has blocked users', () => pm.expect(json.data.length).to.be.greaterThan(0));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{userServiceUrl}}/contacts/blocked?page=1&limit=20",
+              "host": ["{{userServiceUrl}}"], "path": ["contacts", "blocked"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }]
+            }
+          }
+        },
+        {
+          "name": "Unblock User",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Deleted', () => pm.expect(pm.response.json().deleted).to.eql(true));"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{userServiceUrl}}/contacts/blocked/{{blockedId}}", "host": ["{{userServiceUrl}}"], "path": ["contacts", "blocked", "{{blockedId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Moderation Service - Reports",
+      "description": "Signalements (port 3004) - CRUD reports",
+      "item": [
+        {
+          "name": "Create Report",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "const json = pm.response.json();",
+            "pm.test('Status is pending', () => pm.expect(json.status).to.eql('pending'));",
+            "pm.collectionVariables.set('reportId', json.id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reporterId\": \"{{userId}}\",\n  \"reportedUserId\": \"{{user2Id}}\",\n  \"reason\": \"spam\",\n  \"description\": \"Envoi de spam dans le groupe\"\n}" },
+            "url": { "raw": "{{moderationServiceUrl}}/reports", "host": ["{{moderationServiceUrl}}"], "path": ["reports"] }
+          }
+        },
+        {
+          "name": "List Reports",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Has pagination', () => pm.expect(json).to.have.property('data'));",
+            "pm.test('Has data', () => pm.expect(json.data.length).to.be.greaterThan(0));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{moderationServiceUrl}}/reports?page=1&limit=20",
+              "host": ["{{moderationServiceUrl}}"], "path": ["reports"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }]
+            }
+          }
+        },
+        {
+          "name": "List Reports (filter by status)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{moderationServiceUrl}}/reports?status=pending",
+              "host": ["{{moderationServiceUrl}}"], "path": ["reports"],
+              "query": [{ "key": "status", "value": "pending" }]
+            }
+          }
+        },
+        {
+          "name": "Get Report",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has reason', () => pm.expect(pm.response.json()).to.have.property('reason'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{moderationServiceUrl}}/reports/{{reportId}}", "host": ["{{moderationServiceUrl}}"], "path": ["reports", "{{reportId}}"] }
+          }
+        },
+        {
+          "name": "Update Report Status",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Status updated', () => pm.expect(pm.response.json().status).to.eql('reviewed'));"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"reviewed\"\n}" },
+            "url": { "raw": "{{moderationServiceUrl}}/reports/{{reportId}}", "host": ["{{moderationServiceUrl}}"], "path": ["reports", "{{reportId}}"] }
+          }
+        },
+        {
+          "name": "Delete Report",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Deleted', () => pm.expect(pm.response.json().deleted).to.eql(true));"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{moderationServiceUrl}}/reports/{{reportId}}", "host": ["{{moderationServiceUrl}}"], "path": ["reports", "{{reportId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Moderation Service - User Bans",
+      "description": "Bannissements (port 3004) - CRUD bans",
+      "item": [
+        {
+          "name": "Ban User (temporary)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "const json = pm.response.json();",
+            "pm.test('Has expiresAt', () => pm.expect(json.expiresAt).to.not.be.null);",
+            "pm.collectionVariables.set('banId', json.id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{user2Id}}\",\n  \"reason\": \"Spam repetitif\",\n  \"expiresAt\": \"2026-12-31T23:59:59.000Z\"\n}" },
+            "url": { "raw": "{{moderationServiceUrl}}/bans", "host": ["{{moderationServiceUrl}}"], "path": ["bans"] }
+          }
+        },
+        {
+          "name": "Ban Duplicate (should fail 409)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 409', () => pm.response.to.have.status(409));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{user2Id}}\",\n  \"reason\": \"Autre raison\"\n}" },
+            "url": { "raw": "{{moderationServiceUrl}}/bans", "host": ["{{moderationServiceUrl}}"], "path": ["bans"] }
+          }
+        },
+        {
+          "name": "Check Ban (banned)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('User is banned', () => pm.expect(pm.response.json().banned).to.eql(true));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{moderationServiceUrl}}/bans/check/{{user2Id}}", "host": ["{{moderationServiceUrl}}"], "path": ["bans", "check", "{{user2Id}}"] }
+          }
+        },
+        {
+          "name": "List Active Bans",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has data', () => pm.expect(pm.response.json().data.length).to.be.greaterThan(0));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{moderationServiceUrl}}/bans?active=true",
+              "host": ["{{moderationServiceUrl}}"], "path": ["bans"],
+              "query": [{ "key": "active", "value": "true" }]
+            }
+          }
+        },
+        {
+          "name": "Get Ban",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{moderationServiceUrl}}/bans/{{banId}}", "host": ["{{moderationServiceUrl}}"], "path": ["bans", "{{banId}}"] }
+          }
+        },
+        {
+          "name": "Unban User",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Deleted', () => pm.expect(pm.response.json().deleted).to.eql(true));"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{moderationServiceUrl}}/bans/{{banId}}", "host": ["{{moderationServiceUrl}}"], "path": ["bans", "{{banId}}"] }
+          }
+        },
+        {
+          "name": "Check Ban (unbanned)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('User is not banned', () => pm.expect(pm.response.json().banned).to.eql(false));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{moderationServiceUrl}}/bans/check/{{user2Id}}", "host": ["{{moderationServiceUrl}}"], "path": ["bans", "check", "{{user2Id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notification Service - Notifications",
+      "description": "Notifications (port 3003) - CRUD notifications",
+      "item": [
+        {
+          "name": "Create Notification",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "const json = pm.response.json();",
+            "pm.test('Has userId', () => pm.expect(json).to.have.property('userId'));",
+            "pm.test('isRead is false', () => pm.expect(json.isRead).to.eql(false));",
+            "pm.collectionVariables.set('notificationId', json.id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"type\": \"message\",\n  \"title\": \"Nouveau message\",\n  \"content\": \"Vous avez recu un nouveau message\",\n  \"referenceId\": \"{{user2Id}}\",\n  \"referenceType\": \"conversation\"\n}" },
+            "url": { "raw": "{{notificationServiceUrl}}/notifications", "host": ["{{notificationServiceUrl}}"], "path": ["notifications"] }
+          }
+        },
+        {
+          "name": "Create Notification 2",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"type\": \"friend_request\",\n  \"title\": \"Demande de contact\",\n  \"content\": \"user2 veut vous ajouter en contact\"\n}" },
+            "url": { "raw": "{{notificationServiceUrl}}/notifications", "host": ["{{notificationServiceUrl}}"], "path": ["notifications"] }
+          }
+        },
+        {
+          "name": "Get User Notifications",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Has pagination', () => {",
+            "  pm.expect(json).to.have.property('data');",
+            "  pm.expect(json).to.have.property('total');",
+            "  pm.expect(json).to.have.property('totalPages');",
+            "});",
+            "pm.test('Has notifications', () => pm.expect(json.data.length).to.be.greaterThan(0));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{notificationServiceUrl}}/notifications/{{userId}}?page=1&limit=20",
+              "host": ["{{notificationServiceUrl}}"], "path": ["notifications", "{{userId}}"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }]
+            }
+          }
+        },
+        {
+          "name": "Get Notifications (filter by type)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{notificationServiceUrl}}/notifications/{{userId}}?type=message",
+              "host": ["{{notificationServiceUrl}}"], "path": ["notifications", "{{userId}}"],
+              "query": [{ "key": "type", "value": "message" }]
+            }
+          }
+        },
+        {
+          "name": "Get Notifications (filter unread)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{notificationServiceUrl}}/notifications/{{userId}}?isRead=false",
+              "host": ["{{notificationServiceUrl}}"], "path": ["notifications", "{{userId}}"],
+              "query": [{ "key": "isRead", "value": "false" }]
+            }
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has unreadCount', () => pm.expect(pm.response.json()).to.have.property('unreadCount'));",
+            "pm.test('Count > 0', () => pm.expect(pm.response.json().unreadCount).to.be.greaterThan(0));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{notificationServiceUrl}}/notifications/{{userId}}/unread-count", "host": ["{{notificationServiceUrl}}"], "path": ["notifications", "{{userId}}", "unread-count"] }
+          }
+        },
+        {
+          "name": "Mark as Read",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('isRead is true', () => pm.expect(pm.response.json().isRead).to.eql(true));"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{notificationServiceUrl}}/notifications/{{notificationId}}/read", "host": ["{{notificationServiceUrl}}"], "path": ["notifications", "{{notificationId}}", "read"] }
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has markedAsRead count', () => pm.expect(pm.response.json()).to.have.property('markedAsRead'));"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{notificationServiceUrl}}/notifications/{{userId}}/read-all", "host": ["{{notificationServiceUrl}}"], "path": ["notifications", "{{userId}}", "read-all"] }
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Deleted', () => pm.expect(pm.response.json().deleted).to.eql(true));"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{notificationServiceUrl}}/notifications/{{notificationId}}", "host": ["{{notificationServiceUrl}}"], "path": ["notifications", "{{notificationId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notification Service - Settings",
+      "description": "Parametres de notification (port 3003)",
+      "item": [
+        {
+          "name": "Get Notification Settings",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Has settings fields', () => {",
+            "  pm.expect(json).to.have.property('pushEnabled');",
+            "  pm.expect(json).to.have.property('showPreview');",
+            "  pm.expect(json).to.have.property('soundEnabled');",
+            "  pm.expect(json).to.have.property('vibrationEnabled');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{notificationServiceUrl}}/notifications/settings/{{userId}}", "host": ["{{notificationServiceUrl}}"], "path": ["notifications", "settings", "{{userId}}"] }
+          }
+        },
+        {
+          "name": "Update Notification Settings",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Push disabled', () => pm.expect(json.pushEnabled).to.eql(false));",
+            "pm.test('Sound disabled', () => pm.expect(json.soundEnabled).to.eql(false));"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"pushEnabled\": false,\n  \"soundEnabled\": false\n}" },
+            "url": { "raw": "{{notificationServiceUrl}}/notifications/settings/{{userId}}", "host": ["{{notificationServiceUrl}}"], "path": ["notifications", "settings", "{{userId}}"] }
+          }
+        },
+        {
+          "name": "Update Notification Settings (restore defaults)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('All enabled', () => {",
+            "  pm.expect(json.pushEnabled).to.eql(true);",
+            "  pm.expect(json.soundEnabled).to.eql(true);",
+            "  pm.expect(json.showPreview).to.eql(true);",
+            "  pm.expect(json.vibrationEnabled).to.eql(true);",
+            "});"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"pushEnabled\": true,\n  \"soundEnabled\": true,\n  \"showPreview\": true,\n  \"vibrationEnabled\": true\n}" },
+            "url": { "raw": "{{notificationServiceUrl}}/notifications/settings/{{userId}}", "host": ["{{notificationServiceUrl}}"], "path": ["notifications", "settings", "{{userId}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}

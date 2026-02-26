@@ -24,6 +24,18 @@ func NewMessageHandler(httpClient *client.HTTPClient, messageURL string) *Messag
 }
 
 // CreateConversation proxies POST /conversations request to message service
+// @Summary      Create a new conversation
+// @Description  Creates a new conversation with the specified title and members
+// @Tags         conversations
+// @Security     CookieAuth
+// @Accept       json
+// @Produce      json
+// @Param        body body ConversationRequest true "Conversation data"
+// @Success      201  {object} map[string]interface{}
+// @Failure      400  {object} ErrorResponse
+// @Failure      401  {object} ErrorResponse
+// @Failure      500  {object} ErrorResponse
+// @Router       /conversations [post]
 func (h *MessageHandler) CreateConversation(c *gin.Context) {
 	userID := middleware.GetUserIDFromContext(c)
 	if userID == "" {
@@ -53,6 +65,17 @@ func (h *MessageHandler) CreateConversation(c *gin.Context) {
 }
 
 // GetConversation proxies GET /conversations/:id request to message service
+// @Summary      Get conversation details
+// @Description  Retrieves the details of a specific conversation
+// @Tags         conversations
+// @Security     CookieAuth
+// @Produce      json
+// @Param        id path string true "Conversation ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} ErrorResponse
+// @Failure      404  {object} ErrorResponse
+// @Failure      500  {object} ErrorResponse
+// @Router       /conversations/{id} [get]
 func (h *MessageHandler) GetConversation(c *gin.Context) {
 	userID := middleware.GetUserIDFromContext(c)
 	if userID == "" {
@@ -75,6 +98,19 @@ func (h *MessageHandler) GetConversation(c *gin.Context) {
 }
 
 // UpdateConversation proxies PUT /conversations/:id request to message service
+// @Summary      Update conversation
+// @Description  Updates a specific conversation
+// @Tags         conversations
+// @Security     CookieAuth
+// @Accept       json
+// @Produce      json
+// @Param        id   path string true "Conversation ID"
+// @Param        body body ConversationRequest true "Updated conversation data"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} ErrorResponse
+// @Failure      401  {object} ErrorResponse
+// @Failure      500  {object} ErrorResponse
+// @Router       /conversations/{id} [put]
 func (h *MessageHandler) UpdateConversation(c *gin.Context) {
 	userID := middleware.GetUserIDFromContext(c)
 	if userID == "" {
@@ -102,6 +138,15 @@ func (h *MessageHandler) UpdateConversation(c *gin.Context) {
 }
 
 // DeleteConversation proxies DELETE /conversations/:id request to message service
+// @Summary      Delete conversation
+// @Description  Deletes a specific conversation
+// @Tags         conversations
+// @Security     CookieAuth
+// @Param        id path string true "Conversation ID"
+// @Success      204
+// @Failure      401  {object} ErrorResponse
+// @Failure      500  {object} ErrorResponse
+// @Router       /conversations/{id} [delete]
 func (h *MessageHandler) DeleteConversation(c *gin.Context) {
 	userID := middleware.GetUserIDFromContext(c)
 	if userID == "" {

@@ -10,6 +10,7 @@ import (
 type Config struct {
 	Server   ServerConfig
 	Services ServicesConfig
+	JWT      JWTConfig
 }
 
 // ServerConfig holds server configuration
@@ -30,6 +31,11 @@ type ServicesConfig struct {
 	ModerationURL   string
 }
 
+// JWTConfig holds JWT configuration
+type JWTConfig struct {
+	Secret string
+}
+
 // Load loads configuration from environment variables
 func Load() *Config {
 	return &Config{
@@ -46,6 +52,9 @@ func Load() *Config {
 			PresenceURL:     os.Getenv("PRESENCE_SERVICE_URL"),
 			NotificationURL: os.Getenv("NOTIFICATION_SERVICE_URL"),
 			ModerationURL:   os.Getenv("MODERATION_SERVICE_URL"),
+		},
+		JWT: JWTConfig{
+			Secret: os.Getenv("JWT_SECRET"),
 		},
 	}
 }

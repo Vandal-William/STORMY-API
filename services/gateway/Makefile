@@ -1,4 +1,4 @@
-.PHONY: build run test lint clean help
+.PHONY: build run test lint clean help swagger
 
 # Variables
 BINARY_NAME=gateway
@@ -14,6 +14,7 @@ help:
 	@echo "  test-v      - Run unit tests with verbose output"
 	@echo "  lint        - Run linter"
 	@echo "  clean       - Clean build artifacts"
+	@echo "  swagger     - Generate Swagger documentation"
 	@echo "  docker-build - Build Docker image"
 
 # Build the binary
@@ -48,6 +49,12 @@ clean:
 	@echo "Cleaning..."
 	@rm -rf $(BUILD_DIR)
 	@go clean
+
+# Generate Swagger documentation
+swagger:
+	@echo "Generating Swagger documentation..."
+	@swag init -g cmd/api/main.go --dir . --output docs
+	@echo "Swagger docs generated in ./docs"
 
 # Build Docker image
 docker-build:

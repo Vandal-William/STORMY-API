@@ -8,19 +8,26 @@ import (
 )
 
 // SetupRoutes configures all routes for the gateway
-func SetupRoutes(r *gin.Engine, healthHandler *handler.HealthHandler, messageHandler *handler.MessageHandler) {
+func SetupRoutes(r *gin.Engine, healthHandler *handler.HealthHandler, messageHandler *handler.MessageHandler, authHandler *handler.AuthHandler, jwtSecret string) {
 	// Apply global middleware
 	r.Use(middleware.LoggerMiddleware())
 
 	// Health routes (no auth required)
-	healthGroup := r.Group("/")
+	healthGroup := r.Group("")
 	{
 		healthGroup.GET("/info", healthHandler.GetInfo)
 	}
 
+	// Auth routes (no auth required)
+	authGroup := r.Group("/auth")
+	{
+		authGroup.POST("/register", authHandler.Register)
+		authGroup.POST("/login", authHandler.Login)
+	}
+
 	// Protected routes with JWT authentication
 	protectedAPI := r.Group("")
-	protectedAPI.Use(middleware.JWTMiddleware())
+	protectedAPI.Use(middleware.JWTMiddleware(jwtSecret))
 	{
 		// Conversation routes
 		conversationGroup := protectedAPI.Group("/conversations")

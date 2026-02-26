@@ -1,49 +1,35 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 const (
-	// AuthorizationHeader is the HTTP header containing the JWT token
-	AuthorizationHeader = "Authorization"
-	// BearerScheme is the scheme for bearer tokens
-	BearerScheme = "Bearer"
 	// UserIDKey is the context key for the user ID
 	UserIDKey = "user_id"
+	// CookieName is the name of the cookie storing the JWT token
+	CookieName = "access_token"
 )
 
-// JWTMiddleware validates JWT tokens and extracts user information
-func JWTMiddleware() gin.HandlerFunc {
+// JWTMiddleware validates JWT tokens from cookies and extracts user information
+func JWTMiddleware(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get authorization header
-		authHeader := c.GetHeader(AuthorizationHeader)
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
+		// Get token from cookie
+		token, err := c.Cookie(CookieName)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing authorization cookie"})
 			c.Abort()
 			return
 		}
 
-		// Parse bearer token
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != BearerScheme {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
-			c.Abort()
-			return
-		}
-
-		token := parts[1]
-
-		// TODO: Validate JWT token signature and expiration
-		// For now, we'll extract the user_id from a simple format:
-		// The token should be a UUID representing the user
-		// In production, use a proper JWT library (github.com/golang-jwt/jwt)
-		userID := validateAndExtractUserID(token)
+		// Validate JWT token signature and expiration
+		userID := validateAndExtractUserID(token, jwtSecret)
 		if userID == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
 			c.Abort()
 			return
 		}
@@ -56,16 +42,32 @@ func JWTMiddleware() gin.HandlerFunc {
 	}
 }
 
-// TODO: Implement proper JWT validation
-// For now, we accept any UUID as valid
-func validateAndExtractUserID(token string) string {
-	// Simple validation: token should be a non-empty string
-	// In production, validate JWT signature and claims
-	if token == "" {
+// validateAndExtractUserID validates JWT token and extracts user ID from claims
+func validateAndExtractUserID(tokenString, secret string) string {
+	if tokenString == "" || secret == "" {
 		return ""
 	}
-	// Return the token as user ID (should be UUID)
-	return token
+
+	// Parse and validate JWT token
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// Verify signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(secret), nil
+	})
+
+	if err != nil || !token.Valid {
+		return ""
+	}
+
+	// Extract claims
+	claims, ok := token.Claims.(*jwt.RegisteredClaims)
+	if !ok || claims.Subject == "" {
+		return ""
+	}
+
+	return claims.Subject
 }
 
 // GetUserIDFromContext extracts the user ID from the request context

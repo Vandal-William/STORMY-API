@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	swaggerFiles "github.com/swaggo/files"
+	_ "gateway-service/docs"
 )
 
 func main() {
@@ -25,10 +28,18 @@ func main() {
 	// Initialize handlers
 	healthHandler := handler.NewHealthHandler(healthService)
 	messageHandler := handler.NewMessageHandler(httpClient, cfg.Services.MessageURL)
+	authHandler := handler.NewAuthHandler(httpClient, cfg.Services.UserURL)
 
 	// Setup router
 	r := gin.Default()
-	router.SetupRoutes(r, healthHandler, messageHandler)
+	
+	// Setup Swagger
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/", func(c *gin.Context) {
+		c.Redirect(301, "/swagger/index.html")
+	})
+	
+	router.SetupRoutes(r, healthHandler, messageHandler, authHandler, cfg.JWT.Secret)
 
 	// Start server
 	log.Printf("Starting gateway on %s\n", cfg.Server.GetAddr())

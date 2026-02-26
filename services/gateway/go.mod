@@ -4,7 +4,11 @@ go 1.23.0
 
 toolchain go1.23.12
 
-require github.com/gin-gonic/gin v1.11.0
+require (
+	github.com/gin-gonic/gin v1.11.0
+	github.com/swaggo/gin-swagger v1.6.0
+	github.com/swaggo/swag v1.16.3
+)
 
 require (
 	github.com/bytedance/sonic v1.14.0 // indirect

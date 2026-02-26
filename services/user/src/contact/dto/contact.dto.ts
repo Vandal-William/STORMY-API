@@ -1,9 +1,4 @@
-import {
-  IsOptional,
-  IsString,
-  IsUUID,
-  MaxLength,
-} from 'class-validator';
+import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class AddContactDto {
   @IsUUID('4', { message: "L'identifiant du contact doit être un UUID valide" })

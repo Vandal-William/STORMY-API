@@ -54,7 +54,7 @@ export class ContactService {
 
     if (isBlocked) {
       throw new BadRequestException(
-        'Impossible d\'ajouter un utilisateur bloqué en contact',
+        "Impossible d'ajouter un utilisateur bloqué en contact",
       );
     }
 
@@ -105,12 +105,16 @@ export class ContactService {
     };
   }
 
-  async updateContact(userId: string, contactId: string, dto: UpdateContactDto) {
+  async updateContact(
+    userId: string,
+    contactId: string,
+    dto: UpdateContactDto,
+  ) {
     const contact = await this.prisma.contact.findUnique({
       where: { id: contactId },
     });
 
-    if (!contact || contact.userId !== userId) {
+    if (contact?.userId !== userId) {
       throw new NotFoundException('Contact non trouvé');
     }
 
@@ -128,7 +132,7 @@ export class ContactService {
       where: { id: contactId },
     });
 
-    if (!contact || contact.userId !== userId) {
+    if (contact?.userId !== userId) {
       throw new NotFoundException('Contact non trouvé');
     }
 

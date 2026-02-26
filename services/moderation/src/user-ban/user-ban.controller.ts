@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Delete,
   Body,
   Param,
@@ -10,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { UserBanService } from './user-ban.service';
 import { CreateBanDto } from './dto/create-ban.dto';
+import { UpdateBanDto } from './dto/update-ban.dto';
 
 @Controller('bans')
 export class UserBanController {
@@ -40,6 +42,14 @@ export class UserBanController {
   @Get(':id')
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.userBanService.findOne(id);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBanDto,
+  ) {
+    return this.userBanService.update(id, dto);
   }
 
   @Delete(':id')

@@ -19,16 +19,18 @@ interface RequestWithCookies {
   cookies: { ACCESS_TOKEN?: string; REFRESH_TOKEN?: string };
 }
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
 const ACCESS_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: false,
+  secure: IS_PRODUCTION,
   sameSite: 'lax' as const,
   maxAge: 15 * 60 * 1000,
 };
 
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: false,
+  secure: IS_PRODUCTION,
   sameSite: 'lax' as const,
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };

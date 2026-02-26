@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsString,
   Matches,
+  MaxLength,
   MinLength,
 } from 'class-validator';
 
@@ -13,6 +14,9 @@ export class RegisterDto {
 
   @IsString()
   @MinLength(3)
+  @MaxLength(50, {
+    message: "Le nom d'utilisateur ne doit pas dépasser 50 caractères",
+  })
   username: string;
 
   @IsString()

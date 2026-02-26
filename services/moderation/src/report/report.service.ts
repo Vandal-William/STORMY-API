@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ReportReason, ReportStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReportDto } from './dto/create-report.dto';
@@ -9,6 +13,11 @@ export class ReportService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateReportDto) {
+    if (!dto.reportedUserId && !dto.reportedMessageId && !dto.conversationId) {
+      throw new BadRequestException(
+        'Au moins un des champs reportedUserId, reportedMessageId ou conversationId est requis',
+      );
+    }
     return this.prisma.report.create({ data: dto });
   }
 

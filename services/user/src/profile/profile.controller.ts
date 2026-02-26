@@ -15,13 +15,17 @@ import { ProfileService } from './profile.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+interface AuthRequest {
+  user: { userId: string; username: string };
+}
+
 @UseGuards(JwtAuthGuard)
 @Controller('profile')
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
   @Get('me')
-  async getOwnProfile(@Request() req) {
+  async getOwnProfile(@Request() req: AuthRequest) {
     return this.profileService.getOwnProfile(req.user.userId);
   }
 
@@ -53,12 +57,15 @@ export class ProfileController {
   }
 
   @Patch('me')
-  async updateProfile(@Request() req, @Body() dto: UpdateProfileDto) {
+  async updateProfile(
+    @Request() req: AuthRequest,
+    @Body() dto: UpdateProfileDto,
+  ) {
     return this.profileService.updateProfile(req.user.userId, dto);
   }
 
   @Delete('me')
-  async deleteAccount(@Request() req) {
+  async deleteAccount(@Request() req: AuthRequest) {
     return this.profileService.deleteAccount(req.user.userId);
   }
 }

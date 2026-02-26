@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBanDto } from './dto/create-ban.dto';
+import { UpdateBanDto } from './dto/update-ban.dto';
 
 @Injectable()
 export class UserBanService {
@@ -37,7 +38,7 @@ export class UserBanService {
     if (active === 'true') {
       where.OR = [{ expiresAt: null }, { expiresAt: { gt: new Date() } }];
     } else if (active === 'false') {
-      where.expiresAt = { lte: new Date() };
+      where.expiresAt = { not: null, lte: new Date() };
     }
 
     const [data, total] = await Promise.all([
@@ -73,6 +74,24 @@ export class UserBanService {
     }
 
     return { banned: true, ban };
+  }
+
+  async update(id: string, dto: UpdateBanDto) {
+    const ban = await this.prisma.userBan.findUnique({ where: { id } });
+
+    if (!ban) {
+      throw new NotFoundException('Ban non trouvé');
+    }
+
+    return this.prisma.userBan.update({
+      where: { id },
+      data: {
+        ...(dto.reason !== undefined && { reason: dto.reason }),
+        ...(dto.expiresAt !== undefined && {
+          expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+        }),
+      },
+    });
   }
 
   async findOne(id: string) {

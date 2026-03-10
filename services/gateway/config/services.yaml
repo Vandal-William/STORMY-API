@@ -1,0 +1,61 @@
+# Configuration des services pour la Gateway
+# ============================================
+# Cette configuration définit tous les services en aval connectés à la gateway.
+# Pour ajouter une nouvelle API, ajoutez simplement une entrée dans cette liste.
+#
+# Format:
+#   - name: <nom_unique_du_service>
+#     url: <url_du_service>
+#     prefix: <préfixe_de_route>
+#     description: <description_du_service>
+#     auth_required: <true|false>
+
+services:
+  # Service de gestion des utilisateurs et authentification
+  - name: users
+    url: http://user-service:3000
+    prefix: /users
+    description: Service de gestion des utilisateurs et authentification
+    auth_required: false
+
+  # Service de gestion des messages et conversations
+  - name: messages
+    url: http://message-service:3001
+    prefix: /messages
+    description: Service de gestion des messages et conversations
+    auth_required: true
+
+  # Service de gestion de la présence des utilisateurs
+  - name: presence
+    url: http://presence-service:3002
+    prefix: /presence
+    description: Service de détection de présence et statut des utilisateurs
+    auth_required: true
+
+  # Service de gestion des notifications
+  - name: notification
+    url: http://notification-service:3003
+    prefix: /notification
+    description: Service d'envoi et gestion des notifications
+    auth_required: true
+
+  # Service de modération du contenu
+  - name: moderation
+    url: http://moderation-service:3004
+    prefix: /moderation
+    description: Service de modération du contenu et détection de spam
+    auth_required: true
+
+  # Routes d'authentification (sans préfixe, pour un accès facile)
+  - name: auth
+    url: http://user-service:3000/auth
+    prefix: /auth
+    description: Service d'authentification (login, register)
+    auth_required: false
+
+  # Ajouter de nouveaux services:
+  # - name: mon-service
+  #   url: http://mon-service:port
+  #   prefix: /mon-service
+  #   description: Description de mon service
+  #   auth_required: true/false

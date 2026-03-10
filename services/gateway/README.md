@@ -1,101 +1,174 @@
-# Gateway Service
+# 🚀 Gateway Scalable - Vue d'ensemble
 
-API Gateway that provides a single entry point and health monitoring for all downstream services.
-
-## Architecture
+## ✨ Structure du projet
 
 ```
-cmd/api/           - Application entry point
-internal/
-  ├── config/      - Configuration management
-  ├── domain/      - Domain models
-  ├── handler/     - HTTP request handlers
-  ├── middleware/  - HTTP middleware
-  ├── service/     - Business logic
-  └── router/      - Route definitions
-pkg/
-  └── client/      - HTTP client for service calls
-tests/
-  ├── unit/        - Unit tests
-  └── integration/ - Integration tests
+gateway/
+├── cmd/api/main.go
+├── config/services.yaml
+└── internal/
+    ├── config/config.go
+    ├── middleware/
+    │   ├── auth.go
+    │   └── logger.go
+    ├── proxy/
+    │   └── universal.go
+    ├── registry/
+    │   └── service_registry.go
+    └── router/
+        └── router.go
 ```
 
-## Configuration
+---
 
-Set the following environment variables:
+## 📝 Qu'est-ce que chaque fichier?
+
+### **cmd/api/main.go**
+Point d'entrée. Charge la config, crée l'engine Gin, setup les routes, lance le serveur.
+```bash
+go run ./cmd/api/main.go
+```
+
+### **config/services.yaml** ⭐
+Configuration centralisée de TOUS les services. Ajouter une API = ajouter 4 lignes ici.
+```yaml
+services:
+  - name: messages
+    url: http://message-service:3001
+    prefix: /messages
+    auth_required: true
+```
+
+### **internal/config/config.go**
+Charge le YAML et les variables d'environnement. Crée la ServiceRegistry. Expose `Config` et `Load()`.
+
+### **internal/middleware/auth.go**
+Valide les JWT depuis les cookies. Extrait l'user ID et le met dans le contexte pour les routes protégées.
+
+### **internal/middleware/logger.go**
+Log chaque requête HTTP avec la méthode, le chemin, l'IP client et la latence.
+
+### **internal/proxy/universal.go** ✨ NOUVEAU
+Proxy universel unique! Clone copies: headers, cookies, body, query params. Forward vers le service cible. Gère tous les verbes HTTP.
+
+### **internal/registry/service_registry.go** ✨ NOUVEAU
+Registre dynamique thread-safe des services. `Register()`, `FindByPrefix()`, `FindByName()`, `GetAll()`. Lookup O(1).
+
+### **internal/router/router.go**
+Génère AUTOMATIQUEMENT les routes pour CHAQUE service. Applique JWT middleware sélectivement. Setup handler pour `/info`.
+
+---
+
+## 🎯 Flux d'une requête
+
+```
+Client Request
+    ↓
+[Router] Middleware (Logging)
+    ↓
+[Router] Match /{service}/*
+    ↓
+[Middleware] JWT (si auth_required=true)
+    ↓
+[UniversalProxy] Clone tout + Forward
+    ↓
+Service Cible
+    ↓
+Response → Clone tout → Client
+```
+
+---
+
+## ⚡ Démarrer en 3 étapes
+
+### 1️⃣ Configurer services.yaml
+```yaml
+services:
+  - name: mon-api
+    url: http://mon-api:3000
+    prefix: /mon-api
+    auth_required: false
+```
+
+### 2️⃣ Compiler
+```bash
+go mod tidy
+go build ./cmd/api/main.go
+```
+
+### 3️⃣ Lancer
+```bash
+./main
+```
+
+---
+
+## 🔑 Points clés
+
+| Concept | C'est quoi? |
+|---------|-----------|
+| **UniversalProxy** | Proxy unique qui gère TOUS les services. Zéro duplication. |
+| **ServiceRegistry** | Registre des services. Lookup rapide par prefix/nom. |
+| **Routes dynamiques** | Toutes les routes sont générées automatiquement depuis la config. |
+| **auth_required** | Contrôle si JWT middleware s'applique ou pas. |
+| **config/services.yaml** | Seul endroit où ajouter des services! Ajouter une API = 4 lignes. |
+
+---
+
+## 🧪 Tester
 
 ```bash
-PORT=8080
-HOST=0.0.0.0
-USER_SERVICE_URL=http://user-service:3000
-MESSAGE_SERVICE_URL=http://message-service:3001
-PRESENCE_SERVICE_URL=http://presence-service:3002
-NOTIFICATION_SERVICE_URL=http://notification-service:3003
-MODERATION_SERVICE_URL=http://moderation-service:3004
+# Health check + liste des services
+curl http://localhost:8080/info
+
+# Tester une requête (ajustez l'API)
+curl http://localhost:8080/mon-api/resource
+
+# Avec authentification
+curl -b cookies.txt http://localhost:8080/protected/resource
 ```
 
-See `.env.example` for more details.
+---
 
-## Development
+## 🎓 Comment ajouter une nouvelle API?
+
+1. Ouvrir `config/services.yaml`
+2. Ajouter ces 4 lignes:
+```yaml
+  - name: api-nom
+    url: http://api-nom:port
+    prefix: /api-nom
+    auth_required: false
+```
+3. Redémarrer la gateway
+4. C'EST TOUT! ✨
+
+Routes créées automatiquement:
+- `GET /api-nom/*`
+- `POST /api-nom/*`
+- `PUT /api-nom/*`
+- `DELETE /api-nom/*`
+- `PATCH /api-nom/*`
+
+---
+
+## ⚙️ Variables d'environnement
 
 ```bash
-# Build the project
-make build
-
-# Run locally
-make run
-
-# Run tests
-make test
-
-# Run linter
-make lint
+PORT=8080              # Port du serveur
+HOST=0.0.0.0          # Interface d'écoute
+JWT_SECRET=votre-clé  # Clé JWT pour valider tokens
 ```
 
-## API Endpoints
+---
 
-### Health Check
+## ✅ Résumé
 
-```
-GET /info
-```
+- ✨ **Proxy universel** - Gère tous les services sans duplication
+- 🔧 **Registry dynamique** - Lookup O(1), thread-safe
+- 📝 **Routes auto** - Générées depuis la config
+- 🚀 **Scalable** - Ajouter une API = 4 lignes YAML
+- 🔒 **Sécurisé** - JWT middleware intégré
+- 📦 **Propre** - Code SOLID, bien documenté
 
-Returns the health status of the gateway and all downstream services.
-
-**Response:**
-```json
-{
-  "gateway": "ok",
-  "message": "200 OK",
-  "presence": "200 OK",
-  "user": "200 OK",
-  "notification": "200 OK",
-  "moderation": "200 OK"
-}
-```
-
-## Scalability Features
-
-- **Configuration management** via environment variables
-- **Dependency injection** for easy testing and modularity
-- **Middleware support** for cross-cutting concerns
-- **Abstract service layer** for business logic
-- **HTTP client wrapper** for service communication
-- **Unit tests** with mock implementations
-- **Clear separation of concerns** (handler, service, domain, client)
-
-## Testing
-
-The service is designed to be testable:
-
-- Services depend on interfaces, not concrete implementations
-- Handlers depend on service interfaces
-- Mock clients can be easily created for testing
-
-```bash
-# Run unit tests
-make test
-
-# Run with verbose output
-make test-v
-```
+**Bon développement! 🎉**

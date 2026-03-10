@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: gateway:latest
-          imagePullPolicy: Always
+          image: gateway:dev
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               name: http

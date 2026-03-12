@@ -15,7 +15,7 @@ type Conversation struct {
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
 	AvatarURL   string     `json:"avatar_url"`
-	CreatedBy   int32      `json:"created_by"`
+	CreatedBy   string     `json:"created_by"`  // UUID string
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
 }
@@ -24,7 +24,7 @@ type Conversation struct {
 type ConversationMember struct {
 	ID             gocql.UUID `json:"id"`
 	ConversationID gocql.UUID `json:"conversation_id"`
-	UserID         int32      `json:"user_id"`
+	UserID         string     `json:"user_id"`  // UUID string
 	Role           string     `json:"role"` // 'owner', 'admin', 'member'
 	IsMuted        bool       `json:"is_muted"`
 	JoinedAt       time.Time  `json:"joined_at"`
@@ -37,8 +37,8 @@ type CreateConversationRequest struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	AvatarURL   string   `json:"avatar_url"`
-	CreatedBy   int32    `json:"created_by" binding:"required"`
-	MemberIDs   []int32  `json:"member_ids"` // IDs des membres à ajouter
+	CreatedBy   string   `json:"created_by" binding:"required"`  // UUID string
+	MemberIDs   []string `json:"member_ids"` // UUIDs of members to add
 }
 
 // UpdateConversationRequest pour modifier une conversation
@@ -54,7 +54,7 @@ type UpdateConversationRequest struct {
 type Message struct {
 	ID             gocql.UUID              `json:"id"`
 	ConversationID gocql.UUID              `json:"conversation_id"`
-	SenderID       int32                   `json:"sender_id"`
+	SenderID       string                  `json:"sender_id"`  // UUID string
 	Content        string                  `json:"content"`
 	Type           string                  `json:"type"` // 'text', 'image', 'video', etc.
 	ReplyToID      *gocql.UUID             `json:"reply_to_id,omitempty"`
@@ -64,13 +64,13 @@ type Message struct {
 	CreatedAt      time.Time               `json:"created_at"`
 	UpdatedAt      *time.Time              `json:"updated_at,omitempty"`
 	Attachments    []MessageAttachment     `json:"attachments,omitempty"`
-	Status         map[int32]MessageStatus `json:"status,omitempty"` // user_id -> status
+	Status         map[string]MessageStatus `json:"status,omitempty"` // user_id(UUID) -> status
 }
 
 // CreateMessageRequest pour créer un message
 type CreateMessageRequest struct {
 	ConversationID gocql.UUID                 `json:"conversation_id" binding:"required"`
-	SenderID       int32                      `json:"sender_id" binding:"required"`
+	SenderID       string                     `json:"sender_id" binding:"required"`  // UUID string
 	Content        string                     `json:"content" binding:"required"`
 	Type           string                     `json:"type"`
 	ReplyToID      *gocql.UUID                `json:"reply_to_id"`
@@ -106,7 +106,7 @@ type MessageAttachmentInput struct {
 type MessageStatus struct {
 	ID          gocql.UUID `json:"id"`
 	MessageID   gocql.UUID `json:"message_id"`
-	UserID      int32      `json:"user_id"`
+	UserID      string     `json:"user_id"`  // UUID string
 	Status      string     `json:"status"` // 'sent', 'delivered', 'read'
 	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
 	ReadAt      *time.Time `json:"read_at,omitempty"`

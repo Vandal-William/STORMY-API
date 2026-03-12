@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	"github.com/gocql/gocql"
@@ -21,7 +20,7 @@ type MessageRepository interface {
 	GetByConversationID(ctx context.Context, conversationID gocql.UUID, limit int, pageState []byte) ([]domain.Message, []byte, error)
 
 	// GetByUserID récupère tous les messages d'un utilisateur
-	GetByUserID(ctx context.Context, userID int32, limit int) ([]domain.Message, error)
+	GetByUserID(ctx context.Context, userID string, limit int) ([]domain.Message, error)
 
 	// Update modifie un message existant
 	Update(ctx context.Context, id gocql.UUID, message *domain.Message) (*domain.Message, error)
@@ -45,7 +44,7 @@ type ConversationRepository interface {
 	GetByID(ctx context.Context, id gocql.UUID) (*domain.Conversation, error)
 
 	// GetByUserID récupère les conversations d'un utilisateur avec pagination
-	GetByUserID(ctx context.Context, userID int32) ([]domain.Conversation, error)
+	GetByUserID(ctx context.Context, userID string) ([]domain.Conversation, error)
 
 	// Update met à jour une conversation
 	Update(ctx context.Context, id gocql.UUID, conversation *domain.Conversation) (*domain.Conversation, error)
@@ -57,7 +56,7 @@ type ConversationRepository interface {
 	AddMember(ctx context.Context, member *domain.ConversationMember) error
 
 	// RemoveMember retire un membre d'une conversation
-	RemoveMember(ctx context.Context, conversationID gocql.UUID, userID int32) error
+	RemoveMember(ctx context.Context, conversationID gocql.UUID, userID string) error
 
 	// GetMembers récupère les membres d'une conversation
 	GetMembers(ctx context.Context, conversationID gocql.UUID) ([]domain.ConversationMember, error)
@@ -111,7 +110,7 @@ func (r *InMemoryMessageRepository) GetByConversationID(ctx context.Context, con
 	return messages, nil, nil
 }
 
-func (r *InMemoryMessageRepository) GetByUserID(ctx context.Context, userID int32, limit int) ([]domain.Message, error) {
+func (r *InMemoryMessageRepository) GetByUserID(ctx context.Context, userID string, limit int) ([]domain.Message, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -206,14 +205,13 @@ func (r *InMemoryConversationRepository) GetByID(ctx context.Context, id gocql.U
 	return nil, nil
 }
 
-func (r *InMemoryConversationRepository) GetByUserID(ctx context.Context, userID int32) ([]domain.Conversation, error) {
+func (r *InMemoryConversationRepository) GetByUserID(ctx context.Context, userID string) ([]domain.Conversation, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 	var conversations []domain.Conversation
-	userIDStr := strconv.FormatInt(int64(userID), 10)
 	for _, member := range r.members {
-		if strconv.FormatInt(int64(member.UserID), 10) == userIDStr {
+		if member.UserID == userID {
 			if conv, ok := r.conversations[member.ConversationID.String()]; ok {
 				conversations = append(conversations, *conv)
 			}
@@ -248,16 +246,16 @@ func (r *InMemoryConversationRepository) AddMember(ctx context.Context, member *
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	key := member.ConversationID.String() + ":" + strconv.FormatInt(int64(member.UserID), 10)
+	key := member.ConversationID.String() + ":" + member.UserID
 	r.members[key] = member
 	return nil
 }
 
-func (r *InMemoryConversationRepository) RemoveMember(ctx context.Context, conversationID gocql.UUID, userID int32) error {
+func (r *InMemoryConversationRepository) RemoveMember(ctx context.Context, conversationID gocql.UUID, userID string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	key := conversationID.String() + ":" + strconv.FormatInt(int64(userID), 10)
+	key := conversationID.String() + ":" + userID
 	if member, ok := r.members[key]; ok {
 		now := time.Now()
 		member.LeftAt = &now

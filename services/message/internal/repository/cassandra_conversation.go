@@ -46,7 +46,7 @@ func (r *CassandraConversationRepository) Create(ctx context.Context, conversati
 	// Insérer la conversation
 	query := session.Query(
 		`INSERT INTO conversations 
-		(id, type, name, description, avatar_url, created_by, created_at, updated_at)
+		(id, conversation_type, name, description, avatar_url, created_by, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		conversation.ID, conversation.Type, conversation.Name, conversation.Description,
 		conversation.AvatarURL, conversation.CreatedBy, conversation.CreatedAt, conversation.UpdatedAt,
@@ -100,7 +100,7 @@ func (r *CassandraConversationRepository) GetByID(ctx context.Context, id gocql.
 	var conversation domain.Conversation
 
 	query := session.Query(
-		`SELECT id, type, name, description, avatar_url, created_by, created_at, updated_at
+		`SELECT id, conversation_type, name, description, avatar_url, created_by, created_at, updated_at
 		 FROM conversations WHERE id = ?`,
 		id,
 	).WithContext(ctx)
@@ -118,7 +118,7 @@ func (r *CassandraConversationRepository) GetByID(ctx context.Context, id gocql.
 }
 
 // GetByUserID récupère les conversations d'un utilisateur
-func (r *CassandraConversationRepository) GetByUserID(ctx context.Context, userID int32) ([]domain.Conversation, error) {
+func (r *CassandraConversationRepository) GetByUserID(ctx context.Context, userID string) ([]domain.Conversation, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -127,6 +127,8 @@ func (r *CassandraConversationRepository) GetByUserID(ctx context.Context, userI
 	if session == nil {
 		return nil, errors.NewAppError(errors.ErrInternalServer, "cassandra connection lost", "")
 	}
+
+	fmt.Printf("[DEBUG] GetByUserID - Recherche conversations pour userID: %s\n", userID)
 
 	var conversations []domain.Conversation
 
@@ -142,10 +144,13 @@ func (r *CassandraConversationRepository) GetByUserID(ctx context.Context, userI
 	var convID gocql.UUID
 
 	for iter.Scan(&convID) {
+		fmt.Printf("[DEBUG] GetByUserID - Chargement conversation: %s\n", convID.String())
 		if conv, err := r.GetByID(ctx, convID); err == nil && conv != nil {
 			conversations = append(conversations, *conv)
 		}
 	}
+
+	fmt.Printf("[DEBUG] GetByUserID - Total trouvé: %d conversations\n", len(conversations))
 
 	return conversations, iter.Close()
 }
@@ -264,7 +269,7 @@ func (r *CassandraConversationRepository) AddMember(ctx context.Context, member 
 }
 
 // RemoveMember retire un membre d'une conversation
-func (r *CassandraConversationRepository) RemoveMember(ctx context.Context, conversationID gocql.UUID, userID int32) error {
+func (r *CassandraConversationRepository) RemoveMember(ctx context.Context, conversationID gocql.UUID, userID string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -310,7 +315,7 @@ func (r *CassandraConversationRepository) GetMembers(ctx context.Context, conver
 	iter := query.Iter()
 	var id gocql.UUID
 	var convID gocql.UUID
-	var userID int32
+	var userID string
 	var role string
 	var isMuted bool
 	var joinedAt time.Time

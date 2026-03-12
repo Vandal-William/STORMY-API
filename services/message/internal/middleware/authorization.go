@@ -27,7 +27,7 @@ func NewAuthorizationMiddleware(
 }
 
 // IsConversationMember vérifie si un utilisateur est membre d'une conversation
-func (a *AuthorizationMiddleware) IsConversationMember(ctx *gin.Context, conversationID gocql.UUID, userID int32) (bool, error) {
+func (a *AuthorizationMiddleware) IsConversationMember(ctx *gin.Context, conversationID gocql.UUID, userID string) (bool, error) {
     members, err := a.conversationRepo.GetMembers(ctx.Request.Context(), conversationID)
     if err != nil {
         return false, err
@@ -43,7 +43,7 @@ func (a *AuthorizationMiddleware) IsConversationMember(ctx *gin.Context, convers
 }
 
 // IsConversationOwnerOrAdmin vérifie si un utilisateur est propriétaire ou admin d'une conversation
-func (a *AuthorizationMiddleware) IsConversationOwnerOrAdmin(ctx *gin.Context, conversationID gocql.UUID, userID int32) (bool, error) {
+func (a *AuthorizationMiddleware) IsConversationOwnerOrAdmin(ctx *gin.Context, conversationID gocql.UUID, userID string) (bool, error) {
     members, err := a.conversationRepo.GetMembers(ctx.Request.Context(), conversationID)
     if err != nil {
         return false, err
@@ -60,7 +60,7 @@ func (a *AuthorizationMiddleware) IsConversationOwnerOrAdmin(ctx *gin.Context, c
 }
 
 // IsMessageOwner vérifie si un utilisateur est propriétaire d'un message
-func (a *AuthorizationMiddleware) IsMessageOwner(ctx *gin.Context, messageID gocql.UUID, userID int32) (bool, error) {
+func (a *AuthorizationMiddleware) IsMessageOwner(ctx *gin.Context, messageID gocql.UUID, userID string) (bool, error) {
     message, err := a.messageRepo.GetByID(ctx.Request.Context(), messageID)
     if err != nil {
         return false, err
@@ -74,7 +74,7 @@ func (a *AuthorizationMiddleware) IsMessageOwner(ctx *gin.Context, messageID goc
 }
 
 // IsUserAccessingOwnData vérifie si un utilisateur accède à ses propres données
-func IsUserAccessingOwnData(c *gin.Context, requestedUserID int32) (bool, error) {
+func IsUserAccessingOwnData(c *gin.Context, requestedUserID string) (bool, error) {
     userID, err := GetUserIDFromContext(c)
     if err != nil {
         return false, err

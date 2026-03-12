@@ -5,7 +5,6 @@ import (
 	"message-service/internal/middleware"
 	"message-service/internal/service"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gocql/gocql"
@@ -64,6 +63,11 @@ func (h *MessageHandler) GetMessages(c *gin.Context) {
         return
     }
 
+    // ✅ Assurer que la liste n'est jamais nil
+    if messages == nil {
+        messages = []domain.Message{}
+    }
+
     c.JSON(http.StatusOK, gin.H{"messages": messages})
 }
 
@@ -92,17 +96,21 @@ func (h *MessageHandler) GetMessage(c *gin.Context) {
 
 // GetUserMessages retrieves all messages for a user
 func (h *MessageHandler) GetUserMessages(c *gin.Context) {
-	userIDStr := c.Param("user_id")
-	userIDInt, err := strconv.ParseInt(userIDStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID format"})
+	userID := c.Param("user_id")  // UUID string
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing user ID"})
 		return
 	}
 
-	messages, err := h.messageService.GetUserMessages(c.Request.Context(), int32(userIDInt), 50)
+	messages, err := h.messageService.GetUserMessages(c.Request.Context(), userID, 50)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// ✅ Assurer que la liste n'est jamais nil
+	if messages == nil {
+		messages = []domain.Message{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"messages": messages})

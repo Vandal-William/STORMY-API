@@ -35,12 +35,12 @@ kind-control-plane   Ready
 
 ### Build les images Docker 
 ```shell
-docker build -t gateway:dev ./services/gateway
-docker build -t message-service:dev ./services/message
-docker build -t presence-service:dev ./services/presence
-docker build -t user-service:dev ./services/user
-docker build -t notification-service:dev ./services/notification
-docker build -t moderation-service:dev ./services/moderation
+docker build --no-cache -t gateway:dev ./services/gateway
+docker build --no-cache -t message-service:dev ./services/message
+docker build --no-cache -t presence-service:dev ./services/presence
+docker build --no-cache -t user-service:dev ./services/user
+docker build --no-cache -t notification-service:dev ./services/notification
+docker build --no-cache -t moderation-service:dev ./services/moderation
 ```
 ### Charger les images builder
 ```shell

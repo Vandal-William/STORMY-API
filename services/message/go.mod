@@ -4,7 +4,10 @@ go 1.23.0
 
 toolchain go1.23.12
 
-require github.com/gin-gonic/gin v1.11.0
+require (
+	github.com/gin-gonic/gin v1.11.0
+	github.com/golang-jwt/jwt/v5 v5.0.0
+)
 
 require (
 	github.com/bytedance/sonic v1.14.0 // indirect

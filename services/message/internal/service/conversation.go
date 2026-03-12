@@ -28,7 +28,7 @@ func NewConversationService(
 
 // CreateConversation creates a new conversation
 func (s *ConversationService) CreateConversation(ctx context.Context, req *domain.CreateConversationRequest) (*domain.Conversation, error) {
-	if len(req.MemberIDs) < 2 || req.CreatedBy == 0 {
+	if len(req.MemberIDs) < 2 || req.CreatedBy == "" {
 		return nil, fmt.Errorf("conversation must have at least 2 members and a valid creator")
 	}
 
@@ -68,7 +68,7 @@ func (s *ConversationService) GetConversation(ctx context.Context, id gocql.UUID
 }
 
 // GetUserConversations retrieves all conversations for a user
-func (s *ConversationService) GetUserConversations(ctx context.Context, userID int32) ([]domain.Conversation, error) {
+func (s *ConversationService) GetUserConversations(ctx context.Context, userID string) ([]domain.Conversation, error) {
 	return s.conversationRepo.GetByUserID(ctx, userID)
 }
 
@@ -110,7 +110,7 @@ func (s *ConversationService) DeleteConversation(ctx context.Context, id gocql.U
 }
 
 // AddMember adds a member to a conversation
-func (s *ConversationService) AddMember(ctx context.Context, conversationID gocql.UUID, userID int32) error {
+func (s *ConversationService) AddMember(ctx context.Context, conversationID gocql.UUID, userID string) error {
 	conv, err := s.conversationRepo.GetByID(ctx, conversationID)
 	if err != nil {
 		return err
@@ -129,6 +129,6 @@ func (s *ConversationService) AddMember(ctx context.Context, conversationID gocq
 }
 
 // RemoveMember removes a member from a conversation
-func (s *ConversationService) RemoveMember(ctx context.Context, conversationID gocql.UUID, userID int32) error {
+func (s *ConversationService) RemoveMember(ctx context.Context, conversationID gocql.UUID, userID string) error {
 	return s.conversationRepo.RemoveMember(ctx, conversationID, userID)
 }

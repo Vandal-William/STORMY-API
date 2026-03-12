@@ -1,8 +1,8 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gocql/gocql"
@@ -71,19 +71,31 @@ func (h *ConversationHandler) GetConversation(c *gin.Context) {
 
 // GetUserConversations handles GET /users/conversations (authenticated)
 func (h *ConversationHandler) GetUserConversations(c *gin.Context) {
-	// TODO: Get userID from JWT context from gateway
-	// For now, extract from URL param as int32
-	userIDStr := c.Param("user_id")
-	userID, err := strconv.ParseInt(userIDStr, 10, 32)
+	// Get userID from JWT context (UUID string from gateway)
+	claims, err := middleware.GetClaimsFromContext(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID format"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid JWT claims"})
 		return
 	}
 
-	conversations, err := h.conversationService.GetUserConversations(c.Request.Context(), int32(userID))
+	if claims.UserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing user ID in JWT"})
+		return
+	}
+
+	fmt.Printf("[DEBUG] GetUserConversations - claims.UserID: %s\n", claims.UserID)
+
+	conversations, err := h.conversationService.GetUserConversations(c.Request.Context(), claims.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	fmt.Printf("[DEBUG] GetUserConversations - résultats: %d conversations trouvées\n", len(conversations))
+
+	// ✅ Assurer que la liste n'est jamais nil (retourner [] au lieu de null)
+	if conversations == nil {
+		conversations = []domain.Conversation{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"conversations": conversations})
@@ -102,6 +114,11 @@ func (h *ConversationHandler) GetConversationMembers(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// ✅ Assurer que la liste n'est jamais nil
+	if members == nil {
+		members = []domain.ConversationMember{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"members": members})
@@ -159,7 +176,7 @@ func (h *ConversationHandler) AddMember(c *gin.Context) {
 	}
 
 	var req struct {
-		UserID int32 `json:"user_id" binding:"required"`
+		UserID string `json:"user_id" binding:"required"`  // UUID string
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -184,14 +201,13 @@ func (h *ConversationHandler) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	userIDStr := c.Param("user_id")
-	userIDInt, err := strconv.ParseInt(userIDStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID format"})
+	userIDStr := c.Param("user_id")  // UUID string
+	if userIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing user ID"})
 		return
 	}
 
-	err = h.conversationService.RemoveMember(c.Request.Context(), id, int32(userIDInt))
+	err = h.conversationService.RemoveMember(c.Request.Context(), id, userIDStr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

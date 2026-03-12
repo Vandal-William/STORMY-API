@@ -46,7 +46,7 @@ func (r *CassandraMessageRepository) Create(ctx context.Context, msg *domain.Mes
 	// Insérer le message
 	query := session.Query(
 		`INSERT INTO messages 
-		(id, conversation_id, sender_id, content, type, reply_to_id, is_forwarded, is_edited, is_deleted, created_at, updated_at)
+		(id, conversation_id, sender_id, content, message_type, reply_to_id, is_forwarded, is_edited, is_deleted, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		msg.ID, msg.ConversationID, msg.SenderID, msg.Content, msg.Type, msg.ReplyToID, 
 		msg.IsForwarded, msg.IsEdited, msg.IsDeleted, msg.CreatedAt, msg.UpdatedAt,
@@ -59,7 +59,7 @@ func (r *CassandraMessageRepository) Create(ctx context.Context, msg *domain.Mes
 	// Insérer dans la table de dénormalisation pour la pagination
 	queryDenorm := session.Query(
 		`INSERT INTO conversation_messages 
-		(conversation_id, created_at, id, sender_id, content, type)
+		(conversation_id, created_at, id, sender_id, content, message_type)
 		VALUES (?, ?, ?, ?, ?, ?)`,
 		msg.ConversationID, msg.CreatedAt, msg.ID, msg.SenderID, msg.Content, msg.Type,
 	).WithContext(ctx)
@@ -89,7 +89,7 @@ func (r *CassandraMessageRepository) GetByID(ctx context.Context, id gocql.UUID)
 	var msg domain.Message
 
 	query := session.Query(
-		`SELECT id, conversation_id, sender_id, content, type, reply_to_id, 
+		`SELECT id, conversation_id, sender_id, content, message_type, reply_to_id, 
 				is_forwarded, is_edited, is_deleted, created_at, updated_at
 		 FROM messages WHERE id = ?`,
 		id,
@@ -131,8 +131,8 @@ func (r *CassandraMessageRepository) GetByConversationID(ctx context.Context, co
 	var messages []domain.Message
 
 	query := session.Query(
-		`SELECT id, sender_id, content, type, created_at 
-		 FROM conversation_messages 
+		`SELECT id, sender_id, content, message_type, created_at, reply_to_id, is_forwarded, is_edited, is_deleted, updated_at
+		 FROM messages 
 		 WHERE conversation_id = ?
 		 LIMIT ?`,
 		conversationID, limit,
@@ -146,12 +146,17 @@ func (r *CassandraMessageRepository) GetByConversationID(ctx context.Context, co
 	pageState = iter.PageState()
 
 	var id gocql.UUID
-	var senderID int32
+	var senderID string
 	var content string
 	var msgType string
 	var createdAt time.Time
+	var replyToID *gocql.UUID
+	var isForwarded bool
+	var isEdited bool
+	var isDeleted bool
+	var updatedAt *time.Time
 
-	for iter.Scan(&id, &senderID, &content, &msgType, &createdAt) {
+	for iter.Scan(&id, &senderID, &content, &msgType, &createdAt, &replyToID, &isForwarded, &isEdited, &isDeleted, &updatedAt) {
 		msg := domain.Message{
 			ID:             id,
 			ConversationID: conversationID,
@@ -159,6 +164,11 @@ func (r *CassandraMessageRepository) GetByConversationID(ctx context.Context, co
 			Content:        content,
 			Type:           msgType,
 			CreatedAt:      createdAt,
+			ReplyToID:      replyToID,
+			IsForwarded:    isForwarded,
+			IsEdited:       isEdited,
+			IsDeleted:      isDeleted,
+			UpdatedAt:      updatedAt,
 		}
 		messages = append(messages, msg)
 	}
@@ -171,7 +181,7 @@ func (r *CassandraMessageRepository) GetByConversationID(ctx context.Context, co
 }
 
 // GetByUserID récupère les messages envoyés par un utilisateur
-func (r *CassandraMessageRepository) GetByUserID(ctx context.Context, userID int32, limit int) ([]domain.Message, error) {
+func (r *CassandraMessageRepository) GetByUserID(ctx context.Context, userID string, limit int) ([]domain.Message, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -188,7 +198,7 @@ func (r *CassandraMessageRepository) GetByUserID(ctx context.Context, userID int
 	var messages []domain.Message
 
 	query := session.Query(
-		`SELECT id, conversation_id, sender_id, content, type, is_deleted, created_at
+		`SELECT id, conversation_id, sender_id, content, message_type, is_deleted, created_at
 		 FROM messages WHERE sender_id = ?
 		 LIMIT ?`, // Note: Cassandra nécessite un index pour cette requête
 		userID, limit,
@@ -198,7 +208,7 @@ func (r *CassandraMessageRepository) GetByUserID(ctx context.Context, userID int
 
 	var id gocql.UUID
 	var conversationID gocql.UUID
-	var senderID int32
+	var senderID string
 	var content string
 	var msgType string
 	var isDeleted bool

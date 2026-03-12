@@ -1,5 +1,6 @@
 -- Cassandra Message Service - Database Initialization
--- Utilisation: POD=\ && kubectl exec -it \ -- cqlsh localhost < cassandra-init.cql
+-- Utilisation: POD=$(kubectl get pods -l app=cassandra -o jsonpath='{.items[0].metadata.name}')
+--             kubectl exec -it $POD -- cqlsh localhost < cassandra-init.cql
 -- Supprimer le keyspace s'il existe
 DROP KEYSPACE IF EXISTS message_service;
 
@@ -153,20 +154,36 @@ INSERT INTO conversation_members (id, conversation_id, user_id, role, joined_at)
 VALUES (750e8400-e29b-41d4-a716-446655440106, 650e8400-e29b-41d4-a716-446655440003, 550e8400-e29b-41d4-a716-446655440003, 'member', toTimestamp(now()));
 
 -- Messages
-INSERT INTO messages (id, conversation_id, sender_id, content, created_at, updated_at)
-VALUES (750e8400-e29b-41d4-a716-446655440001, 650e8400-e29b-41d4-a716-446655440001, 550e8400-e29b-41d4-a716-446655440001, 'Hey Bob, how are you?', toTimestamp(now()), toTimestamp(now()));
+INSERT INTO messages (id, conversation_id, sender_id, content, message_type, created_at, updated_at)
+VALUES (750e8400-e29b-41d4-a716-446655440001, 650e8400-e29b-41d4-a716-446655440001, 550e8400-e29b-41d4-a716-446655440001, 'Hey Bob, how are you?', 'text', toTimestamp(now()), toTimestamp(now()));
 
-INSERT INTO messages (id, conversation_id, sender_id, content, created_at, updated_at)
-VALUES (750e8400-e29b-41d4-a716-446655440002, 650e8400-e29b-41d4-a716-446655440001, 550e8400-e29b-41d4-a716-446655440002, 'Hi Alice! I am doing great, thanks for asking!', toTimestamp(now()), toTimestamp(now()));
+INSERT INTO messages (id, conversation_id, sender_id, content, message_type, created_at, updated_at)
+VALUES (750e8400-e29b-41d4-a716-446655440002, 650e8400-e29b-41d4-a716-446655440001, 550e8400-e29b-41d4-a716-446655440002, 'Hi Alice! I am doing great, thanks for asking!', 'text', toTimestamp(now()), toTimestamp(now()));
 
-INSERT INTO messages (id, conversation_id, sender_id, content, created_at, updated_at)
-VALUES (750e8400-e29b-41d4-a716-446655440003, 650e8400-e29b-41d4-a716-446655440002, 550e8400-e29b-41d4-a716-446655440001, 'Team, please review the latest design specs', toTimestamp(now()), toTimestamp(now()));
+INSERT INTO messages (id, conversation_id, sender_id, content, message_type, created_at, updated_at)
+VALUES (750e8400-e29b-41d4-a716-446655440003, 650e8400-e29b-41d4-a716-446655440002, 550e8400-e29b-41d4-a716-446655440001, 'Team, please review the latest design specs', 'text', toTimestamp(now()), toTimestamp(now()));
 
-INSERT INTO messages (id, conversation_id, sender_id, content, created_at, updated_at)
-VALUES (750e8400-e29b-41d4-a716-446655440004, 650e8400-e29b-41d4-a716-446655440002, 550e8400-e29b-41d4-a716-446655440002, 'Looks good! I will update the frontend accordingly', toTimestamp(now()), toTimestamp(now()));
+INSERT INTO messages (id, conversation_id, sender_id, content, message_type, created_at, updated_at)
+VALUES (750e8400-e29b-41d4-a716-446655440004, 650e8400-e29b-41d4-a716-446655440002, 550e8400-e29b-41d4-a716-446655440002, 'Looks good! I will update the frontend accordingly', 'text', toTimestamp(now()), toTimestamp(now()));
 
-INSERT INTO messages (id, conversation_id, sender_id, content, created_at, updated_at)
-VALUES (750e8400-e29b-41d4-a716-446655440005, 650e8400-e29b-41d4-a716-446655440003, 550e8400-e29b-41d4-a716-446655440003, 'Anyone up for lunch later?', toTimestamp(now()), toTimestamp(now()));
+INSERT INTO messages (id, conversation_id, sender_id, content, message_type, created_at, updated_at)
+VALUES (750e8400-e29b-41d4-a716-446655440005, 650e8400-e29b-41d4-a716-446655440003, 550e8400-e29b-41d4-a716-446655440003, 'Anyone up for lunch later?', 'text', toTimestamp(now()), toTimestamp(now()));
+
+-- Conversation Messages (dénormalisé pour pagination rapide)
+INSERT INTO conversation_messages (conversation_id, created_at, id, sender_id, content, message_type)
+VALUES (650e8400-e29b-41d4-a716-446655440001, toTimestamp(now()), 750e8400-e29b-41d4-a716-446655440001, 550e8400-e29b-41d4-a716-446655440001, 'Hey Bob, how are you?', 'text');
+
+INSERT INTO conversation_messages (conversation_id, created_at, id, sender_id, content, message_type)
+VALUES (650e8400-e29b-41d4-a716-446655440001, toTimestamp(now()), 750e8400-e29b-41d4-a716-446655440002, 550e8400-e29b-41d4-a716-446655440002, 'Hi Alice! I am doing great, thanks for asking!', 'text');
+
+INSERT INTO conversation_messages (conversation_id, created_at, id, sender_id, content, message_type)
+VALUES (650e8400-e29b-41d4-a716-446655440002, toTimestamp(now()), 750e8400-e29b-41d4-a716-446655440003, 550e8400-e29b-41d4-a716-446655440001, 'Team, please review the latest design specs', 'text');
+
+INSERT INTO conversation_messages (conversation_id, created_at, id, sender_id, content, message_type)
+VALUES (650e8400-e29b-41d4-a716-446655440002, toTimestamp(now()), 750e8400-e29b-41d4-a716-446655440004, 550e8400-e29b-41d4-a716-446655440002, 'Looks good! I will update the frontend accordingly', 'text');
+
+INSERT INTO conversation_messages (conversation_id, created_at, id, sender_id, content, message_type)
+VALUES (650e8400-e29b-41d4-a716-446655440003, toTimestamp(now()), 750e8400-e29b-41d4-a716-446655440005, 550e8400-e29b-41d4-a716-446655440003, 'Anyone up for lunch later?', 'text');
 
 -- User Conversations
 INSERT INTO user_conversations (user_id, conversation_id, conversation_type, last_activity)

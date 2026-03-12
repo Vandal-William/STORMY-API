@@ -24,7 +24,7 @@ func NewMessageService(repo repository.MessageRepository) *MessageService {
 // CreateMessage creates a new message
 func (s *MessageService) CreateMessage(ctx context.Context, req *domain.CreateMessageRequest) (*domain.Message, error) {
 	var emptyUUID gocql.UUID
-	if req.ConversationID == emptyUUID || req.SenderID == 0 || req.Content == "" {
+	if req.ConversationID == emptyUUID || req.SenderID == "" || req.Content == "" {
 		return nil, fmt.Errorf("invalid message data")
 	}
 
@@ -55,7 +55,7 @@ func (s *MessageService) GetByConversationID(ctx context.Context, conversationID
 }
 
 // GetUserMessages retrieves all messages for a user
-func (s *MessageService) GetUserMessages(ctx context.Context, userID int32, limit int) ([]domain.Message, error) {
+func (s *MessageService) GetUserMessages(ctx context.Context, userID string, limit int) ([]domain.Message, error) {
 	return s.repo.GetByUserID(ctx, userID, limit)
 }
 

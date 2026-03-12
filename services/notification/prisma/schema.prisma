@@ -9,6 +9,7 @@ generator client {
 
 enum NotificationType {
   message
+  friend_request
   group_invite
   mention
   system
@@ -25,6 +26,7 @@ model Notification {
   isRead        Boolean          @default(false) @map("is_read")
   createdAt     DateTime         @default(now()) @map("created_at")
 
+  @@index([userId])
   @@map("notifications")
 }
 

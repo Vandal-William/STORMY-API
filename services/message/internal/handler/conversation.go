@@ -7,18 +7,24 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gocql/gocql"
 	"message-service/internal/domain"
+	"message-service/internal/middleware"
 	"message-service/internal/service"
 )
 
 // ConversationHandler handles conversation-related HTTP requests
 type ConversationHandler struct {
 	conversationService *service.ConversationService
+	AuthMiddleware      *middleware.AuthorizationMiddleware
 }
 
 // NewConversationHandler creates a new conversation handler
-func NewConversationHandler(conversationService *service.ConversationService) *ConversationHandler {
+func NewConversationHandler(
+	conversationService *service.ConversationService,
+	authMiddleware *middleware.AuthorizationMiddleware,
+	) *ConversationHandler {
 	return &ConversationHandler{
 		conversationService: conversationService,
+		AuthMiddleware:      authMiddleware,
 	}
 }
 

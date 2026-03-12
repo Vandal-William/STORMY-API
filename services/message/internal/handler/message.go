@@ -2,6 +2,7 @@ package handler
 
 import (
 	"message-service/internal/domain"
+	"message-service/internal/middleware"
 	"message-service/internal/service"
 	"net/http"
 	"strconv"
@@ -12,13 +13,21 @@ import (
 
 // MessageHandler handles message-related requests
 type MessageHandler struct {
-	messageService *service.MessageService
+	messageService      *service.MessageService
+    conversationService *service.ConversationService
+    AuthMiddleware      *middleware.AuthorizationMiddleware
 }
 
 // NewMessageHandler creates a new message handler
-func NewMessageHandler(messageService *service.MessageService) *MessageHandler {
+func NewMessageHandler(
+	messageService *service.MessageService,
+    conversationService *service.ConversationService,
+    authMiddleware *middleware.AuthorizationMiddleware,
+	) *MessageHandler {
 	return &MessageHandler{
-		messageService: messageService,
+		messageService:      messageService,
+        conversationService: conversationService,
+        AuthMiddleware:      authMiddleware,
 	}
 }
 
@@ -38,6 +47,24 @@ func (h *MessageHandler) CreateMessage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, message)
+}
+
+// GetMessages retrieves all messages for a conversation
+func (h *MessageHandler) GetMessages(c *gin.Context) {
+    conversationIDStr := c.Param("conversation_id")
+    conversationID, err := gocql.ParseUUID(conversationIDStr)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid conversation ID format"})
+        return
+    }
+
+    messages, err := h.messageService.GetByConversationID(c.Request.Context(), conversationID, 50)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"messages": messages})
 }
 
 // GetMessage retrieves a message by ID

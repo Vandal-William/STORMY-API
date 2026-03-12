@@ -118,8 +118,10 @@ func registrDynamicHTTPMethods(group *gin.RouterGroup, service *registry.Service
 
 			// Construire l'URL complète du service cible
 			// Exemple: service.URL = "http://message-service:3001"
-			//          path = "/123/members"
-			//          targetURL = "http://message-service:3001/123/members"
+			//          path = "/users/conversations"
+			//          targetURL = "http://message-service:3001/users/conversations"
+			// NOTE: service.Prefix est déjà consommé par le groupe de routes,
+			// donc on ne l'ajoute pas ici (sinon on le duplique)
 			targetURL := service.URL + path
 
 			// Proxifier la requête vers le service

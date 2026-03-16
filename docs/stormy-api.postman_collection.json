@@ -1,0 +1,460 @@
+{
+  "info": {
+    "name": "Stormy API",
+    "description": "Collection complète des APIs NestJS - User, Notification, Moderation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "USER_URL", "value": "http://localhost:3000" },
+    { "key": "NOTIFICATION_URL", "value": "http://localhost:3003" },
+    { "key": "MODERATION_URL", "value": "http://localhost:3004" },
+    { "key": "ACCESS_TOKEN", "value": "" },
+    { "key": "USER_ID", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "User Service",
+      "item": [
+        {
+          "name": "Auth",
+          "item": [
+            {
+              "name": "Register",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{USER_URL}}/auth/register", "host": ["{{USER_URL}}"], "path": ["auth", "register"] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"+33612345678\",\n  \"username\": \"testuser\",\n  \"password\": \"Test1234!\",\n  \"email\": \"test@example.com\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Login",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "// Save cookies automatically (access_token & refresh_token are httpOnly cookies)",
+                      "const json = pm.response.json();",
+                      "if (json.user && json.user.id) {",
+                      "    pm.collectionVariables.set('USER_ID', json.user.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{USER_URL}}/auth/login", "host": ["{{USER_URL}}"], "path": ["auth", "login"] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"Test1234!\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Refresh Token",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": { "raw": "{{USER_URL}}/auth/refresh", "host": ["{{USER_URL}}"], "path": ["auth", "refresh"] }
+              }
+            },
+            {
+              "name": "Logout",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": { "raw": "{{USER_URL}}/auth/logout", "host": ["{{USER_URL}}"], "path": ["auth", "logout"] }
+              }
+            },
+            {
+              "name": "Get Me (Auth)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{USER_URL}}/auth/me", "host": ["{{USER_URL}}"], "path": ["auth", "me"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile",
+          "item": [
+            {
+              "name": "Get My Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{USER_URL}}/profile/me", "host": ["{{USER_URL}}"], "path": ["profile", "me"] }
+              }
+            },
+            {
+              "name": "Search Profiles",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{USER_URL}}/profile/search?username=test&page=1&limit=20",
+                  "host": ["{{USER_URL}}"],
+                  "path": ["profile", "search"],
+                  "query": [
+                    { "key": "username", "value": "test" },
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Profile by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{USER_URL}}/profile/{{USER_ID}}", "host": ["{{USER_URL}}"], "path": ["profile", "{{USER_ID}}"] }
+              }
+            },
+            {
+              "name": "Update My Profile",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{USER_URL}}/profile/me", "host": ["{{USER_URL}}"], "path": ["profile", "me"] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"newusername\",\n  \"email\": \"new@example.com\",\n  \"avatarUrl\": \"https://example.com/avatar.png\",\n  \"about\": \"Hello world!\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Delete My Profile",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": { "raw": "{{USER_URL}}/profile/me", "host": ["{{USER_URL}}"], "path": ["profile", "me"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Contacts",
+          "item": [
+            {
+              "name": "Add Contact",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{USER_URL}}/contacts", "host": ["{{USER_URL}}"], "path": ["contacts"] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"contactUserId\": \"uuid-of-user-to-add\",\n  \"nickname\": \"Mon ami\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Get My Contacts",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{USER_URL}}/contacts?page=1&limit=20",
+                  "host": ["{{USER_URL}}"],
+                  "path": ["contacts"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Contact",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{USER_URL}}/contacts/{{CONTACT_ID}}", "host": ["{{USER_URL}}"], "path": ["contacts", "{{CONTACT_ID}}"] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nickname\": \"Nouveau surnom\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Delete Contact",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": { "raw": "{{USER_URL}}/contacts/{{CONTACT_ID}}", "host": ["{{USER_URL}}"], "path": ["contacts", "{{CONTACT_ID}}"] }
+              }
+            },
+            {
+              "name": "Block User",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{USER_URL}}/contacts/blocked", "host": ["{{USER_URL}}"], "path": ["contacts", "blocked"] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"blockedUserId\": \"uuid-of-user-to-block\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Get Blocked Users",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{USER_URL}}/contacts/blocked?page=1&limit=20",
+                  "host": ["{{USER_URL}}"],
+                  "path": ["contacts", "blocked"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Unblock User",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": { "raw": "{{USER_URL}}/contacts/blocked/{{BLOCKED_ID}}", "host": ["{{USER_URL}}"], "path": ["contacts", "blocked", "{{BLOCKED_ID}}"] }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Notification Service",
+      "item": [
+        {
+          "name": "Create Notification",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{NOTIFICATION_URL}}/notifications", "host": ["{{NOTIFICATION_URL}}"], "path": ["notifications"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{USER_ID}}\",\n  \"type\": \"message\",\n  \"title\": \"Nouveau message\",\n  \"content\": \"Vous avez recu un nouveau message\",\n  \"referenceId\": \"uuid-optional\",\n  \"referenceType\": \"message\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{NOTIFICATION_URL}}/notifications/{{USER_ID}}?page=1&limit=20",
+              "host": ["{{NOTIFICATION_URL}}"],
+              "path": ["notifications", "{{USER_ID}}"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "type", "value": "message", "disabled": true },
+                { "key": "isRead", "value": "false", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{NOTIFICATION_URL}}/notifications/{{USER_ID}}/unread-count", "host": ["{{NOTIFICATION_URL}}"], "path": ["notifications", "{{USER_ID}}", "unread-count"] }
+          }
+        },
+        {
+          "name": "Mark as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{NOTIFICATION_URL}}/notifications/{{NOTIFICATION_ID}}/read", "host": ["{{NOTIFICATION_URL}}"], "path": ["notifications", "{{NOTIFICATION_ID}}", "read"] }
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{NOTIFICATION_URL}}/notifications/{{USER_ID}}/read-all", "host": ["{{NOTIFICATION_URL}}"], "path": ["notifications", "{{USER_ID}}", "read-all"] }
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{NOTIFICATION_URL}}/notifications/{{NOTIFICATION_ID}}", "host": ["{{NOTIFICATION_URL}}"], "path": ["notifications", "{{NOTIFICATION_ID}}"] }
+          }
+        },
+        {
+          "name": "Get Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{NOTIFICATION_URL}}/notifications/settings/{{USER_ID}}", "host": ["{{NOTIFICATION_URL}}"], "path": ["notifications", "settings", "{{USER_ID}}"] }
+          }
+        },
+        {
+          "name": "Update Settings",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{NOTIFICATION_URL}}/notifications/settings/{{USER_ID}}", "host": ["{{NOTIFICATION_URL}}"], "path": ["notifications", "settings", "{{USER_ID}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pushEnabled\": true,\n  \"showPreview\": true,\n  \"soundEnabled\": true,\n  \"vibrationEnabled\": false\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Moderation Service",
+      "item": [
+        {
+          "name": "Reports",
+          "item": [
+            {
+              "name": "Create Report",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{MODERATION_URL}}/reports", "host": ["{{MODERATION_URL}}"], "path": ["reports"] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reporterId\": \"{{USER_ID}}\",\n  \"reportedUserId\": \"uuid-of-reported-user\",\n  \"reason\": \"spam\",\n  \"description\": \"This user is sending spam messages\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Get All Reports",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{MODERATION_URL}}/reports?page=1&limit=20",
+                  "host": ["{{MODERATION_URL}}"],
+                  "path": ["reports"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" },
+                    { "key": "status", "value": "pending", "disabled": true },
+                    { "key": "reason", "value": "spam", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Report by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{MODERATION_URL}}/reports/{{REPORT_ID}}", "host": ["{{MODERATION_URL}}"], "path": ["reports", "{{REPORT_ID}}"] }
+              }
+            },
+            {
+              "name": "Update Report Status",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{MODERATION_URL}}/reports/{{REPORT_ID}}", "host": ["{{MODERATION_URL}}"], "path": ["reports", "{{REPORT_ID}}"] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"reviewed\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Delete Report",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": { "raw": "{{MODERATION_URL}}/reports/{{REPORT_ID}}", "host": ["{{MODERATION_URL}}"], "path": ["reports", "{{REPORT_ID}}"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bans",
+          "item": [
+            {
+              "name": "Create Ban",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{MODERATION_URL}}/bans", "host": ["{{MODERATION_URL}}"], "path": ["bans"] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"uuid-of-user-to-ban\",\n  \"reason\": \"Repeated spam violations\",\n  \"expiresAt\": \"2026-04-10T00:00:00.000Z\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Get All Bans",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{MODERATION_URL}}/bans?page=1&limit=20",
+                  "host": ["{{MODERATION_URL}}"],
+                  "path": ["bans"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" },
+                    { "key": "active", "value": "true", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Check User Ban",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{MODERATION_URL}}/bans/check/{{USER_ID}}", "host": ["{{MODERATION_URL}}"], "path": ["bans", "check", "{{USER_ID}}"] }
+              }
+            },
+            {
+              "name": "Get Ban by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{MODERATION_URL}}/bans/{{BAN_ID}}", "host": ["{{MODERATION_URL}}"], "path": ["bans", "{{BAN_ID}}"] }
+              }
+            },
+            {
+              "name": "Update Ban",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{MODERATION_URL}}/bans/{{BAN_ID}}", "host": ["{{MODERATION_URL}}"], "path": ["bans", "{{BAN_ID}}"] },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Updated reason\",\n  \"expiresAt\": \"2026-05-10T00:00:00.000Z\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Delete Ban",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": { "raw": "{{MODERATION_URL}}/bans/{{BAN_ID}}", "host": ["{{MODERATION_URL}}"], "path": ["bans", "{{BAN_ID}}"] }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

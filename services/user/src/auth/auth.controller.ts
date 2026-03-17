@@ -26,6 +26,7 @@ const ACCESS_COOKIE_OPTIONS = {
   secure: IS_PRODUCTION,
   sameSite: 'lax' as const,
   maxAge: 15 * 60 * 1000,
+  path: '/',
 };
 
 const REFRESH_COOKIE_OPTIONS = {
@@ -33,6 +34,7 @@ const REFRESH_COOKIE_OPTIONS = {
   secure: IS_PRODUCTION,
   sameSite: 'lax' as const,
   maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: '/',
 };
 
 @Controller('auth')
@@ -45,9 +47,9 @@ export class AuthController {
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { access_token, refresh_token } =
+    const { ACCESS_TOKEN, refresh_token } =
       await this.authService.register(dto);
-    res.cookie('ACCESS_TOKEN', access_token, ACCESS_COOKIE_OPTIONS);
+    res.cookie('ACCESS_TOKEN', ACCESS_TOKEN, ACCESS_COOKIE_OPTIONS);
     res.cookie('REFRESH_TOKEN', refresh_token, REFRESH_COOKIE_OPTIONS);
     return { message: 'registered' };
   }
@@ -58,9 +60,18 @@ export class AuthController {
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { access_token, refresh_token } = await this.authService.login(dto);
-    res.cookie('ACCESS_TOKEN', access_token, ACCESS_COOKIE_OPTIONS);
+    console.log('[USER-SERVICE] ===== LOGIN STARTED =====');
+    const { ACCESS_TOKEN, refresh_token } = await this.authService.login(dto);
+    
+    console.log('[USER-SERVICE] Envoi des cookies:');
+    console.log('[USER-SERVICE] - ACCESS_TOKEN length:', ACCESS_TOKEN.length);
+    console.log('[USER-SERVICE] - REFRESH_TOKEN length:', refresh_token.length);
+    console.log('[USER-SERVICE] Cookie options:', { path: '/', domain: 'localhost' });
+    
+    res.cookie('ACCESS_TOKEN', ACCESS_TOKEN, ACCESS_COOKIE_OPTIONS);
     res.cookie('REFRESH_TOKEN', refresh_token, REFRESH_COOKIE_OPTIONS);
+    
+    console.log('[USER-SERVICE] ===== LOGIN COMPLETED =====\n');
     return { message: 'logged in' };
   }
 
@@ -74,9 +85,9 @@ export class AuthController {
       throw new UnauthorizedException('No refresh token provided');
     }
 
-    const { access_token } =
+    const { ACCESS_TOKEN } =
       await this.authService.refreshAccessToken(refreshToken);
-    res.cookie('ACCESS_TOKEN', access_token, ACCESS_COOKIE_OPTIONS);
+    res.cookie('ACCESS_TOKEN', ACCESS_TOKEN, ACCESS_COOKIE_OPTIONS);
     return { message: 'token refreshed' };
   }
 

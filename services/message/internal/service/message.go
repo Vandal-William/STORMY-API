@@ -22,18 +22,24 @@ func NewMessageService(repo repository.MessageRepository) *MessageService {
 }
 
 // CreateMessage creates a new message
-func (s *MessageService) CreateMessage(ctx context.Context, req *domain.CreateMessageRequest) (*domain.Message, error) {
+func (s *MessageService) CreateMessage(ctx context.Context, senderID string, req *domain.CreateMessageRequest) (*domain.Message, error) {
 	var emptyUUID gocql.UUID
-	if req.ConversationID == emptyUUID || req.SenderID == "" || req.Content == "" {
+	if req.ConversationID == emptyUUID || senderID == "" || req.Content == "" {
 		return nil, fmt.Errorf("invalid message data")
+	}
+
+	// Default type to "text" if not provided
+	msgType := req.Type
+	if msgType == "" {
+		msgType = "text"
 	}
 
 	message := &domain.Message{
 		ID:             gocql.TimeUUID(),
 		ConversationID: req.ConversationID,
-		SenderID:       req.SenderID,
+		SenderID:       senderID,
 		Content:        req.Content,
-		Type:           req.Type,
+		Type:           msgType,
 		ReplyToID:      req.ReplyToID,
 		IsForwarded:    false,
 		IsEdited:       false,
@@ -71,6 +77,14 @@ func (s *MessageService) UpdateMessage(ctx context.Context, id gocql.UUID, req *
 	}
 
 	msg.Content = req.Content
+	
+	// Default type to "text" if not provided
+	if req.Type != "" {
+		msg.Type = req.Type
+	} else {
+		msg.Type = "text"
+	}
+	
 	msg.IsEdited = true
 
 	return s.repo.Update(ctx, id, msg)

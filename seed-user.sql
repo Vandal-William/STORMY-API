@@ -4,6 +4,7 @@
 
 
 -- Supprimer les tables si elles existent (pour éviter les conflits)
+DROP TABLE IF EXISTS refresh_tokens CASCADE;
 DROP TABLE IF EXISTS blocked_users CASCADE;
 DROP TABLE IF EXISTS contacts CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
@@ -21,6 +22,19 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Table refresh_tokens
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id TEXT PRIMARY KEY,
+  token VARCHAR(500) NOT NULL UNIQUE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for refresh_tokens
+CREATE INDEX IF NOT EXISTS refresh_tokens_user_id_idx ON refresh_tokens(user_id);
+CREATE INDEX IF NOT EXISTS refresh_tokens_expires_at_idx ON refresh_tokens(expires_at);
 
 -- Table contacts
 CREATE TABLE IF NOT EXISTS contacts (

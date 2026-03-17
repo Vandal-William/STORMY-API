@@ -38,7 +38,7 @@ export class AuthService {
       const refreshToken = this.generateRefreshToken();
       await this.storeRefreshToken(user.id, refreshToken);
 
-      return { access_token: accessToken, refresh_token: refreshToken };
+      return { ACCESS_TOKEN: accessToken, refresh_token: refreshToken };
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -76,7 +76,7 @@ export class AuthService {
     const refreshToken = this.generateRefreshToken();
     await this.storeRefreshToken(user.id, refreshToken);
 
-    return { access_token: accessToken, refresh_token: refreshToken };
+    return { ACCESS_TOKEN: accessToken, refresh_token: refreshToken };
   }
 
   async refreshAccessToken(refreshToken: string) {
@@ -95,7 +95,7 @@ export class AuthService {
     }
 
     return {
-      access_token: this.generateToken(
+      ACCESS_TOKEN: this.generateToken(
         storedToken.user.id,
         storedToken.user.username,
       ),

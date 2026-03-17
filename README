@@ -60,6 +60,10 @@ kubectl rollout restart deployment user-service
 kubectl rollout restart deployment notification-service
 kubectl rollout restart deployment moderation-service
 ```
+### En cas d'image persistente
+```shell
+docker rmi user-service:dev
+``` 
 ### Vérifier l’état des Pods
 ```shell
 kubectl get pods

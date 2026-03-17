@@ -26,6 +26,11 @@ func NewAuthorizationMiddleware(
     }
 }
 
+// GetConversationRepository retourne le repository des conversations
+func (a *AuthorizationMiddleware) GetConversationRepository() repository.ConversationRepository {
+	return a.conversationRepo
+}
+
 // IsConversationMember vérifie si un utilisateur est membre d'une conversation
 func (a *AuthorizationMiddleware) IsConversationMember(ctx *gin.Context, conversationID gocql.UUID, userID string) (bool, error) {
     members, err := a.conversationRepo.GetMembers(ctx.Request.Context(), conversationID)

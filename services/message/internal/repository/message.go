@@ -60,6 +60,9 @@ type ConversationRepository interface {
 
 	// GetMembers récupère les membres d'une conversation
 	GetMembers(ctx context.Context, conversationID gocql.UUID) ([]domain.ConversationMember, error)
+
+	// GetUserRoleInConversation récupère le rôle d'un utilisateur dans une conversation
+	GetUserRoleInConversation(ctx context.Context, conversationID gocql.UUID, userID string) (string, error)
 }
 
 // ============== IN-MEMORY IMPLEMENTATIONS FOR DEVELOPMENT ==============
@@ -275,4 +278,18 @@ func (r *InMemoryConversationRepository) GetMembers(ctx context.Context, convers
 		}
 	}
 	return members, nil
+}
+
+// GetUserRoleInConversation récupère le rôle d'un utilisateur dans une conversation
+func (r *InMemoryConversationRepository) GetUserRoleInConversation(ctx context.Context, conversationID gocql.UUID, userID string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	convIDStr := conversationID.String()
+	for _, member := range r.members {
+		if member.ConversationID.String() == convIDStr && member.UserID == userID && member.LeftAt == nil {
+			return member.Role, nil
+		}
+	}
+	return "", nil // Not found
 }

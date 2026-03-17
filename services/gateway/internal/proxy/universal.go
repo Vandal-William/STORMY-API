@@ -10,6 +10,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // UniversalProxyHandler gère le proxy universel pour toutes les requêtes.
 // Il copie intelligemment tous les headers, cookies, body et query parameters
 // vers le service cible, puis retourne la réponse au client.
@@ -126,15 +134,21 @@ func (h *UniversalProxyHandler) buildProxyRequest(c *gin.Context, targetURL stri
 	}
 	fmt.Printf("[GATEWAY] Cookies reçus du client:\n")
 	for _, cookie := range c.Request.Cookies() {
-		fmt.Printf("  - %s: %s...\n", cookie.Name, cookie.Value[:30])
+		fmt.Printf("  - %s: %s (httpOnly: %v, secure: %v, domain: %s, path: %s)\n", 
+			cookie.Name, cookie.Value, cookie.HttpOnly, cookie.Secure, cookie.Domain, cookie.Path)
 	}
 	fmt.Printf("===========================\n\n")
 
 	// Copier TOUS les headers de la requête originale
 	h.copyRequestHeaders(c.Request, req)
 
-	// Copier TOUS les cookies de la requête originale
-	h.copyRequestCookies(c.Request, req)
+	// IMPORTANT: Transmettre le header Cookie RAW directement (ne pas recréer)
+	if cookieHeader := c.Request.Header.Get("Cookie"); cookieHeader != "" {
+		req.Header.Set("Cookie", cookieHeader)
+		fmt.Printf("[PROXY] Cookie header forwarded to backend: %s\n", cookieHeader)
+	} else {
+		fmt.Printf("[PROXY] ⚠️  NO COOKIE HEADER FOUND IN REQUEST!\n")
+	}
 
 	// Copier les query parameters
 	req.URL.RawQuery = c.Request.URL.RawQuery

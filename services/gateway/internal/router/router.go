@@ -7,6 +7,7 @@ import (
 	"gateway-service/internal/proxy"
 	"gateway-service/internal/registry"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -30,6 +31,13 @@ import (
 //   - GET / -> Redirection vers la documentation
 //   - GET /swagger/* -> Documentation Swagger
 func SetupRoutes(r *gin.Engine, cfg *config.Config) {
+	fmt.Fprintf(os.Stderr, "[SETUP-ROUTES] Starting SetupRoutes function\n")
+	
+	// Ajouter le middleware CORS EN PREMIER (support cookies cross-origin)
+	fmt.Fprintf(os.Stderr, "[SETUP-ROUTES] About to call CORSMiddleware()\n")
+	r.Use(middleware.CORSMiddleware())
+	fmt.Fprintf(os.Stderr, "[SETUP-ROUTES] CORSMiddleware() called successfully\n")
+
 	// Appliquer le middleware de logging global
 	r.Use(middleware.LoggerMiddleware())
 
@@ -119,8 +127,8 @@ func registrDynamicHTTPMethods(group *gin.RouterGroup, service *registry.Service
 			// Construire l'URL complète du service cible
 			// Exemple: service.URL = "http://message-service:3001"
 			//          service.Prefix = "/messages"
-			//          path = "/users/conversations"
-			//          targetURL = "http://message-service:3001/messages/users/conversations"
+			//          path = "/auth/login" (le prefix a été retiré par Gin automatiquement)
+			//          targetURL = "http://message-service:3001/messages/auth/login"
 			targetURL := service.URL + service.Prefix + path
 
 			// Proxifier la requête vers le service

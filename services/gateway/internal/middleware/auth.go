@@ -13,7 +13,7 @@ const (
 	// UserIDKey is the context key for the user ID
 	UserIDKey = "user_id"
 	// CookieName is the name of the cookie storing the JWT token
-	CookieName = "access_token"
+	CookieName = "ACCESS_TOKEN"
 )
 
 // JWTMiddleware validates JWT tokens from cookies OR Authorization headers and extracts user information

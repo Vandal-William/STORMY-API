@@ -361,7 +361,7 @@ Réponse:
 
 ```bash
 # Requête authentifiée
-curl -H "Cookie: access_token=VOTRE_TOKEN" \
+curl -H "Cookie: ACCESS_TOKEN=VOTRE_TOKEN" \
   http://localhost:8080/messages/123
 
 # Requête non authentifiée (si auth_required=false)

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gocql/gocql"
 	"message-service/internal/domain"
@@ -27,16 +28,22 @@ func NewConversationService(
 }
 
 // CreateConversation creates a new conversation
-func (s *ConversationService) CreateConversation(ctx context.Context, req *domain.CreateConversationRequest) (*domain.Conversation, error) {
-	if len(req.MemberIDs) < 2 || req.CreatedBy == "" {
-		return nil, fmt.Errorf("conversation must have at least 2 members and a valid creator")
+func (s *ConversationService) CreateConversation(ctx context.Context, createdBy string, req *domain.CreateConversationRequest) (*domain.Conversation, error) {
+	if createdBy == "" {
+		return nil, fmt.Errorf("creator must be valid")
+	}
+
+	// Default type to "group" if not provided
+	conversationType := req.Type
+	if conversationType == "" {
+		conversationType = "group"
 	}
 
 	conversation := &domain.Conversation{
 		ID:        gocql.TimeUUID(),
-		CreatedBy: req.CreatedBy,
+		CreatedBy: createdBy,
 		Name:      req.Name,
-		Type:      req.Type,
+		Type:      conversationType,
 		Description: req.Description,
 		AvatarURL: req.AvatarURL,
 	}
@@ -47,11 +54,14 @@ func (s *ConversationService) CreateConversation(ctx context.Context, req *domai
 		return nil, err
 	}
 
-	// Add members
+	// Le créateur est déjà ajouté comme "owner" par le repository
+	// Ajouter seulement les autres membres
 	for _, memberID := range req.MemberIDs {
 		member := &domain.ConversationMember{
+			ID:             gocql.TimeUUID(),
 			ConversationID: createdConv.ID,
 			UserID:         memberID,
+			Role:           "member",
 			JoinedAt:       createdConv.CreatedAt,
 		}
 		if err := s.conversationRepo.AddMember(ctx, member); err != nil {
@@ -91,6 +101,14 @@ func (s *ConversationService) UpdateConversation(ctx context.Context, id gocql.U
 	if req.Name != "" {
 		conv.Name = req.Name
 	}
+	
+	if req.Description != "" {
+		conv.Description = req.Description
+	}
+	
+	if req.AvatarURL != "" {
+		conv.AvatarURL = req.AvatarURL
+	}
 
 	return s.conversationRepo.Update(ctx, id, conv)
 }
@@ -121,8 +139,12 @@ func (s *ConversationService) AddMember(ctx context.Context, conversationID gocq
 	}
 
 	member := &domain.ConversationMember{
+		ID:             gocql.TimeUUID(),
 		ConversationID: conversationID,
 		UserID:         userID,
+		Role:           "member",
+		IsMuted:        false,
+		JoinedAt:       time.Now(),
 	}
 
 	return s.conversationRepo.AddMember(ctx, member)

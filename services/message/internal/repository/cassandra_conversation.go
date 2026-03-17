@@ -43,6 +43,12 @@ func (r *CassandraConversationRepository) Create(ctx context.Context, conversati
 	conversation.CreatedAt = now
 	conversation.UpdatedAt = &now
 
+	fmt.Printf("[CONVERSATION-INSERT] ==========================================\n")
+	fmt.Printf("[CONVERSATION-INSERT] CreatedBy: %s (type: %T)\n", conversation.CreatedBy, conversation.CreatedBy)
+	fmt.Printf("[CONVERSATION-INSERT] ID: %s\n", conversation.ID)
+	fmt.Printf("[CONVERSATION-INSERT] Name: %s\n", conversation.Name)
+	fmt.Printf("[CONVERSATION-INSERT] ==========================================\n")
+
 	// Insérer la conversation
 	query := session.Query(
 		`INSERT INTO conversations 
@@ -53,8 +59,10 @@ func (r *CassandraConversationRepository) Create(ctx context.Context, conversati
 	).WithContext(ctx)
 
 	if err := query.Exec(); err != nil {
+		fmt.Printf("[CONVERSATION-INSERT] ❌ INSERT FAILED: %v\n", err)
 		return nil, fmt.Errorf("failed to create conversation: %w", err)
 	}
+	fmt.Printf("[CONVERSATION-INSERT] ✓ INSERT SUCCESS\n")
 
 	// Ajouter le créateur comme premier membre (owner)
 	ownerMember := &domain.ConversationMember{
@@ -67,26 +75,16 @@ func (r *CassandraConversationRepository) Create(ctx context.Context, conversati
 	}
 
 	if err := r.AddMember(ctx, ownerMember); err != nil {
-		// Log l'erreur mais ne fail pas - la conversation est créée
-		fmt.Printf("Warning: failed to add creator as member: %v\n", err)
+		fmt.Printf("[CONVERSATION-INSERT] ❌ Failed to add creator as member: %v\n", err)
+		return nil, fmt.Errorf("failed to add creator as conversation member: %w", err)
 	}
+	fmt.Printf("[CONVERSATION-INSERT] ✓ Creator added as member\n")
 
-	// Ajouter à l'index dénormalisé pour les recherches rapides
-	queryDenorm := session.Query(
-		`INSERT INTO user_conversations 
-		(user_id, conversation_id, conversation_type, last_activity)
-		VALUES (?, ?, ?, ?)`,
-		conversation.CreatedBy, conversation.ID, conversation.Type, now,
-	).WithContext(ctx)
-
-	if err := queryDenorm.Exec(); err != nil {
-		fmt.Printf("Warning: failed to add to user_conversations index: %v\n", err)
-	}
-
+	// Retourner la conversation créée
 	return conversation, nil
 }
 
-// GetByID récupère une conversation par ID
+// GetByID récupère une conversation par son ID
 func (r *CassandraConversationRepository) GetByID(ctx context.Context, id gocql.UUID) (*domain.Conversation, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -130,6 +128,12 @@ func (r *CassandraConversationRepository) GetByUserID(ctx context.Context, userI
 
 	fmt.Printf("[DEBUG] GetByUserID - Recherche conversations pour userID: %s\n", userID)
 
+	// Convertir le string userID en UUID pour Cassandra
+	userUUID, err := gocql.ParseUUID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user ID format: %w", err)
+	}
+
 	var conversations []domain.Conversation
 
 	query := session.Query(
@@ -137,7 +141,7 @@ func (r *CassandraConversationRepository) GetByUserID(ctx context.Context, userI
 		 FROM user_conversations 
 		 WHERE user_id = ?
 		 ORDER BY last_activity DESC`,
-		userID,
+		userUUID,
 	).WithContext(ctx)
 
 	iter := query.Iter()
@@ -194,6 +198,12 @@ func (r *CassandraConversationRepository) Delete(ctx context.Context, id gocql.U
 		return errors.NewAppError(errors.ErrInternalServer, "cassandra connection lost", "")
 	}
 
+	// D'abord récupérer tous les membres pour nettoyer l'index user_conversations
+	members, err := r.GetMembers(ctx, id)
+	if err != nil {
+		fmt.Printf("Warning: failed to get members for cleanup: %v\n", err)
+	}
+
 	// Supprimer tous les messages de la conversation
 	queryMessages := session.Query(
 		`DELETE FROM messages WHERE conversation_id = ?`,
@@ -212,6 +222,18 @@ func (r *CassandraConversationRepository) Delete(ctx context.Context, id gocql.U
 
 	if err := queryMembers.Exec(); err != nil {
 		fmt.Printf("Warning: failed to delete members: %v\n", err)
+	}
+
+	// Nettoyer l'index user_conversations pour chaque ancien membre
+	for _, member := range members {
+		queryUserIndex := session.Query(
+			`DELETE FROM user_conversations WHERE user_id = ? AND conversation_id = ?`,
+			member.UserID, id,
+		).WithContext(ctx)
+
+		if err := queryUserIndex.Exec(); err != nil {
+			fmt.Printf("Warning: failed to delete user index for %s: %v\n", member.UserID, err)
+		}
 	}
 
 	// Supprimer la conversation
@@ -279,17 +301,29 @@ func (r *CassandraConversationRepository) RemoveMember(ctx context.Context, conv
 		return errors.NewAppError(errors.ErrInternalServer, "cassandra connection lost", "")
 	}
 
-	now := time.Now()
-
-	// Marquer le membre comme quitté (soft delete)
+	// D'abord récupérer le ID du membre
+	var memberID gocql.UUID
 	query := session.Query(
-		`UPDATE conversation_members 
-		 SET left_at = ?
-		 WHERE conversation_id = ? AND user_id = ?`,
-		now, conversationID, userID,
+		`SELECT id FROM conversation_members 
+		 WHERE conversation_id = ? AND user_id = ?
+		 ALLOW FILTERING`,
+		conversationID, userID,
 	).WithContext(ctx)
 
-	return query.Exec()
+	if err := query.Scan(&memberID); err != nil {
+		if err == gocql.ErrNotFound {
+			return fmt.Errorf("member not found in conversation")
+		}
+		return fmt.Errorf("failed to find member: %w", err)
+	}
+
+	// Maintenant supprimer le membre avec son ID (clé primaire)
+	deleteQuery := session.Query(
+		`DELETE FROM conversation_members WHERE id = ?`,
+		memberID,
+	).WithContext(ctx)
+
+	return deleteQuery.Exec()
 }
 
 // GetMembers récupère les membres actifs d'une conversation
@@ -337,4 +371,34 @@ func (r *CassandraConversationRepository) GetMembers(ctx context.Context, conver
 	}
 
 	return members, iter.Close()
+}
+
+// GetUserRoleInConversation récupère le rôle d'un utilisateur dans une conversation
+func (r *CassandraConversationRepository) GetUserRoleInConversation(ctx context.Context, conversationID gocql.UUID, userID string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+
+	session := r.client.GetSession()
+	if session == nil {
+		return "", errors.NewAppError(errors.ErrInternalServer, "cassandra connection lost", "")
+	}
+
+	var role string
+
+	query := session.Query(
+		`SELECT role FROM conversation_members 
+		 WHERE conversation_id = ? AND user_id = ?
+		 ALLOW FILTERING`,
+		conversationID, userID,
+	).WithContext(ctx)
+
+	if err := query.Scan(&role); err != nil {
+		if err == gocql.ErrNotFound {
+			return "", nil // User not found in conversation
+		}
+		return "", fmt.Errorf("failed to get user role: %w", err)
+	}
+
+	return role, nil
 }

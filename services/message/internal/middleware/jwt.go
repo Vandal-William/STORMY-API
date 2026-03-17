@@ -48,8 +48,8 @@ func JWTMiddleware(jwtSecret string) gin.HandlerFunc {
         }
         fmt.Printf("========================================\n\n")
 
-        // 1. Essayer d'abord le cookie "access_token" (du gateway)
-        tokenString, err = c.Cookie("access_token")
+        // 1. Essayer d'abord le cookie "ACCESS_TOKEN" (du gateway)
+        tokenString, err = c.Cookie("ACCESS_TOKEN")
         if err != nil {
             // 2. Essayer cookie "authorization"
             tokenString, err = c.Cookie("authorization")

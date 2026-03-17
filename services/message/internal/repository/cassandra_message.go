@@ -104,6 +104,11 @@ func (r *CassandraMessageRepository) GetByID(ctx context.Context, id gocql.UUID)
 		return nil, fmt.Errorf("failed to get message: %w", err)
 	}
 
+	// Retourner une erreur si le message est supprimé (soft delete)
+	if msg.IsDeleted {
+		return nil, errors.ErrMessageNotFound
+	}
+
 	// Récupérer les pièces jointes
 	attachments, err := r.getAttachments(ctx, msg.ID)
 	if err == nil && len(attachments) > 0 {
@@ -157,6 +162,11 @@ func (r *CassandraMessageRepository) GetByConversationID(ctx context.Context, co
 	var updatedAt *time.Time
 
 	for iter.Scan(&id, &senderID, &content, &msgType, &createdAt, &replyToID, &isForwarded, &isEdited, &isDeleted, &updatedAt) {
+		// Ignorer les messages supprimés (soft delete)
+		if isDeleted {
+			continue
+		}
+		
 		msg := domain.Message{
 			ID:             id,
 			ConversationID: conversationID,
@@ -248,19 +258,46 @@ func (r *CassandraMessageRepository) Update(ctx context.Context, id gocql.UUID, 
 	now := time.Now()
 	updates.UpdatedAt = &now
 
+	// Mettre à jour la table messages
 	query := session.Query(
 		`UPDATE messages 
-		 SET content = ?, is_edited = true, updated_at = ?
+		 SET content = ?, message_type = ?, is_edited = true, updated_at = ?
 		 WHERE id = ?`,
-		updates.Content, now, id,
+		updates.Content, updates.Type, now, id,
 	).WithContext(ctx)
 
 	if err := query.Exec(); err != nil {
+		fmt.Printf("[MESSAGE-UPDATE] ❌ Failed to update messages table: %v\n", err)
 		return nil, fmt.Errorf("failed to update message: %w", err)
+	}
+	fmt.Printf("[MESSAGE-UPDATE] ✓ messages table updated\n")
+
+	// Mettre à jour aussi la table dénormalisée conversation_messages si elle existe
+	if len(updates.ConversationID) > 0 {
+		queryDenorm := session.Query(
+			`UPDATE conversation_messages 
+			 SET content = ?, message_type = ?, is_edited = true, updated_at = ?
+			 WHERE conversation_id = ? AND created_at = ? AND id = ?`,
+			updates.Content, updates.Type, now,
+			updates.ConversationID, updates.CreatedAt, id,
+		).WithContext(ctx)
+
+		if err := queryDenorm.Exec(); err != nil {
+			fmt.Printf("[MESSAGE-UPDATE] ⚠ Warning: failed to update conversation_messages table: %v\n", err)
+			// Ne pas retourner l'erreur - continuer car c'est une table secondaire
+		} else {
+			fmt.Printf("[MESSAGE-UPDATE] ✓ conversation_messages table updated\n")
+		}
 	}
 
 	// Récupérer le message mis à jour
-	return r.GetByID(ctx, id)
+	updated, err := r.GetByID(ctx, id)
+	if err != nil {
+		fmt.Printf("[MESSAGE-UPDATE] ❌ Failed to fetch updated message: %v\n", err)
+		return nil, err
+	}
+	fmt.Printf("[MESSAGE-UPDATE] ✓ Message retrieved successfully: is_edited=%v, content='%s'\n", updated.IsEdited, updated.Content)
+	return updated, nil
 }
 
 // Delete marque un message comme supprimé (soft delete)
@@ -274,13 +311,10 @@ func (r *CassandraMessageRepository) Delete(ctx context.Context, id gocql.UUID) 
 		return errors.NewAppError(errors.ErrInternalServer, "cassandra connection lost", "")
 	}
 
-	now := time.Now()
-
+	// Vrai DELETE physique
 	query := session.Query(
-		`UPDATE messages 
-		 SET is_deleted = true, updated_at = ?
-		 WHERE id = ?`,
-		now, id,
+		`DELETE FROM messages WHERE id = ?`,
+		id,
 	).WithContext(ctx)
 
 	return query.Exec()

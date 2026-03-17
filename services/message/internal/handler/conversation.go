@@ -37,7 +37,20 @@ func (h *ConversationHandler) CreateConversation(c *gin.Context) {
 		return
 	}
 
-	conversation, err := h.conversationService.CreateConversation(c.Request.Context(), &req)
+	// Extract creator ID from JWT context
+	claims, err := middleware.GetClaimsFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid JWT claims"})
+		return
+	}
+
+	if claims.UserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing user ID in JWT"})
+		return
+	}
+
+	// Pass request and createdBy to service
+	conversation, err := h.conversationService.CreateConversation(c.Request.Context(), claims.UserID, &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -175,6 +188,35 @@ func (h *ConversationHandler) AddMember(c *gin.Context) {
 		return
 	}
 
+	// Extract user ID from JWT
+	claims, err := middleware.GetClaimsFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid JWT claims"})
+		return
+	}
+
+	if claims.UserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing user ID in JWT"})
+		return
+	}
+
+	// Verify user is owner of the conversation
+	role, err := h.AuthMiddleware.GetConversationRepository().GetUserRoleInConversation(c.Request.Context(), id, claims.UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to verify user role: %v", err)})
+		return
+	}
+
+	if role == "" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "user is not a member of this conversation"})
+		return
+	}
+
+	if role != "owner" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "only conversation owner can add members"})
+		return
+	}
+
 	var req struct {
 		UserID string `json:"user_id" binding:"required"`  // UUID string
 	}
@@ -198,6 +240,35 @@ func (h *ConversationHandler) RemoveMember(c *gin.Context) {
 	id, err := gocql.ParseUUID(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid conversation ID format"})
+		return
+	}
+
+	// Extract user ID from JWT
+	claims, err := middleware.GetClaimsFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid JWT claims"})
+		return
+	}
+
+	if claims.UserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing user ID in JWT"})
+		return
+	}
+
+	// Verify user is owner of the conversation
+	role, err := h.AuthMiddleware.GetConversationRepository().GetUserRoleInConversation(c.Request.Context(), id, claims.UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to verify user role: %v", err)})
+		return
+	}
+
+	if role == "" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "user is not a member of this conversation"})
+		return
+	}
+
+	if role != "owner" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "only conversation owner can remove members"})
 		return
 	}
 

@@ -39,7 +39,20 @@ func (h *MessageHandler) CreateMessage(c *gin.Context) {
 		return
 	}
 
-	message, err := h.messageService.CreateMessage(c.Request.Context(), &req)
+	// Extract sender ID from JWT context
+	claims, err := middleware.GetClaimsFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid JWT claims"})
+		return
+	}
+
+	if claims.UserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing user ID in JWT"})
+		return
+	}
+
+	// Pass request and senderID to service
+	message, err := h.messageService.CreateMessage(c.Request.Context(), claims.UserID, &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

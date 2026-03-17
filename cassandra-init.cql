@@ -1,6 +1,5 @@
 -- Cassandra Message Service - Database Initialization
--- Utilisation: POD=$(kubectl get pods -l app=cassandra -o jsonpath='{.items[0].metadata.name}')
---             kubectl exec -it $POD -- cqlsh localhost < cassandra-init.cql
+-- Utilisation: POD=$(kubectl get pods -l app=cassandra -o jsonpath='{.items[0].metadata.name}') && kubectl exec -it $POD -- cqlsh localhost < cassandra-init.cql
 -- Supprimer le keyspace s'il existe
 DROP KEYSPACE IF EXISTS message_service;
 
@@ -36,9 +35,6 @@ CREATE TABLE IF NOT EXISTS conversation_members (
   joined_at TIMESTAMP,
   left_at TIMESTAMP
 );
-
-CREATE INDEX IF NOT EXISTS idx_conversation_members_user_id 
-  ON conversation_members(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_conversation_members_conversation_id 
   ON conversation_members(conversation_id);

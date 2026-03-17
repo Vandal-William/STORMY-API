@@ -33,11 +33,10 @@ type ConversationMember struct {
 
 // CreateConversationRequest pour créer une conversation
 type CreateConversationRequest struct {
-	Type        string   `json:"type" binding:"required,oneof=private group"`
+	Type        string   `json:"type" binding:"omitempty,oneof=private group"`
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	AvatarURL   string   `json:"avatar_url"`
-	CreatedBy   string   `json:"created_by" binding:"required"`  // UUID string
 	MemberIDs   []string `json:"member_ids"` // UUIDs of members to add
 }
 
@@ -70,7 +69,6 @@ type Message struct {
 // CreateMessageRequest pour créer un message
 type CreateMessageRequest struct {
 	ConversationID gocql.UUID                 `json:"conversation_id" binding:"required"`
-	SenderID       string                     `json:"sender_id" binding:"required"`  // UUID string
 	Content        string                     `json:"content" binding:"required"`
 	Type           string                     `json:"type"`
 	ReplyToID      *gocql.UUID                `json:"reply_to_id"`
@@ -80,6 +78,7 @@ type CreateMessageRequest struct {
 // UpdateMessageRequest pour modifier un message
 type UpdateMessageRequest struct {
 	Content string `json:"content" binding:"required"`
+	Type    string `json:"type"`
 }
 
 // MessageAttachment représente une pièce jointe

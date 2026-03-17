@@ -1,3 +1,4 @@
+// Package proxy provides HTTP proxying functionality for the gateway.
 package proxy
 
 import (

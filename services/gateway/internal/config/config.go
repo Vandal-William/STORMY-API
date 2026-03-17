@@ -200,7 +200,9 @@ func loadServicesFromEnv(cfg *Config) {
 	for _, service := range defaultServices {
 		if service.URL != "" {
 			cfg.Services = append(cfg.Services, service)
-			if err := cfg.ServiceRegistry.Register(service); err != nil { return nil, err }
+			if err := cfg.ServiceRegistry.Register(service); err != nil {
+				log.Printf("Error registering service %s: %v\n", service.Name, err)
+			}
 		}
 	}
 }

@@ -210,12 +210,6 @@ func (h *UniversalProxyHandler) copyRequestHeaders(src *http.Request, dst *http.
 	}
 }
 
-	// Les cookies sont déjà dans src.Cookies(), on les copie tous
-	for _, cookie := range src.Cookies() {
-		dst.AddCookie(cookie)
-	}
-}
-
 // copyResponseHeaders copie tous les headers de la réponse du service cible
 // vers la réponse finale au client, en excluant les headers "hop-by-hop".
 //

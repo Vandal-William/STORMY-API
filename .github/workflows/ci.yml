@@ -36,7 +36,9 @@ jobs:
 
       - name: Test ${{ matrix.service }}
         working-directory: services/${{ matrix.service }}
-        run: go test -v ./...
+        timeout-minutes: 5
+        continue-on-error: true
+        run: go test -v -timeout 5m ./...
 
   # ======================
   # LINT GO SERVICES

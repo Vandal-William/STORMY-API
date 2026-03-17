@@ -1,9 +1,9 @@
-// Package config provides configuration loading for the gateway.
 package config
 
 import (
 	"fmt"
 	"gateway-service/internal/registry"
+	"log"
 	"os"
 	"time"
 

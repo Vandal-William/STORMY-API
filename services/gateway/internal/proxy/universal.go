@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -113,23 +112,6 @@ func (h *UniversalProxyHandler) buildProxyRequest(c *gin.Context, targetURL stri
 		return nil, err
 	}
 
-	// [DEBUG] Log tous les headers et cookies reçus par le gateway
-	fmt.Printf("\n=== GATEWAY PROXY DEBUG ===\n")
-	fmt.Printf("[GATEWAY] Request from client: %s %s\n", c.Request.Method, c.Request.RequestURI)
-	fmt.Printf("[GATEWAY] Headers reçus du client:\n")
-	for name, values := range c.Request.Header {
-		if name == "Authorization" {
-			fmt.Printf("  - %s: %s...\n", name, values[0][:50])
-		} else {
-			fmt.Printf("  - %s: %v\n", name, values)
-		}
-	}
-	fmt.Printf("[GATEWAY] Cookies reçus du client:\n")
-	for _, cookie := range c.Request.Cookies() {
-		fmt.Printf("  - %s: %s...\n", cookie.Name, cookie.Value[:30])
-	}
-	fmt.Printf("===========================\n\n")
-
 	// Copier TOUS les headers de la requête originale
 	h.copyRequestHeaders(c.Request, req)
 
@@ -139,28 +121,10 @@ func (h *UniversalProxyHandler) buildProxyRequest(c *gin.Context, targetURL stri
 	// Copier les query parameters
 	req.URL.RawQuery = c.Request.URL.RawQuery
 
-	// ✅ S'assurer explicitement que le JWT Authorization est transmis au service cible
+	// S'assurer explicitement que le JWT Authorization est transmis au service cible
 	if authHeader := c.Request.Header.Get("Authorization"); authHeader != "" {
 		req.Header.Set("Authorization", authHeader)
-		fmt.Printf("[JWT] Authorization transmitted to %s: %s\n", targetURL, authHeader[:20]+"...")
-	} else {
-		fmt.Printf("[JWT] WARNING: No Authorization header found for %s\n", targetURL)
 	}
-
-	// [DEBUG] Log les headers et cookies ENVOYÉS au service
-	fmt.Printf("\n=== GATEWAY -> MESSAGE-SERVICE ===\n")
-	fmt.Printf("[PROXY] Envoyé à: %s\n", targetURL)
-	fmt.Printf("[PROXY] Headers envoyés au service:\n")
-	for name, values := range req.Header {
-		if name == "Authorization" {
-			fmt.Printf("  - %s: %s...\n", name, values[0][:50])
-		} else if name == "Cookie" {
-			fmt.Printf("  - %s: %v\n", name, values)
-		} else {
-			fmt.Printf("  - %s: %v\n", name, values)
-		}
-	}
-	fmt.Printf("==================================\n\n")
 
 	return req, nil
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"message-service/internal/domain"
 	"message-service/internal/middleware"
 	"message-service/internal/service"
@@ -41,7 +42,8 @@ func (h *MessageHandler) CreateMessage(c *gin.Context) {
 
 	message, err := h.messageService.CreateMessage(c.Request.Context(), &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] CreateMessage failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
@@ -59,7 +61,8 @@ func (h *MessageHandler) GetMessages(c *gin.Context) {
 
     messages, err := h.messageService.GetByConversationID(c.Request.Context(), conversationID, 50)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        log.Printf("[ERROR] GetMessages failed: %v", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
         return
     }
 
@@ -82,7 +85,8 @@ func (h *MessageHandler) GetMessage(c *gin.Context) {
 
 	message, err := h.messageService.GetMessage(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] GetMessage failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
@@ -104,7 +108,8 @@ func (h *MessageHandler) GetUserMessages(c *gin.Context) {
 
 	messages, err := h.messageService.GetUserMessages(c.Request.Context(), userID, 50)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] GetUserMessages failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
@@ -134,7 +139,8 @@ func (h *MessageHandler) UpdateMessage(c *gin.Context) {
 
 	message, err := h.messageService.UpdateMessage(c.Request.Context(), id, &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] UpdateMessage failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
@@ -152,7 +158,8 @@ func (h *MessageHandler) DeleteMessage(c *gin.Context) {
 
 	err = h.messageService.DeleteMessage(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] DeleteMessage failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 

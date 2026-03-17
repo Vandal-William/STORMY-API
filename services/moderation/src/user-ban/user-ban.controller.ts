@@ -7,12 +7,18 @@ import {
   Body,
   Param,
   Query,
+  UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { UserBanService } from './user-ban.service';
 import { CreateBanDto } from './dto/create-ban.dto';
 import { UpdateBanDto } from './dto/update-ban.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin', 'moderator')
 @Controller('bans')
 export class UserBanController {
   constructor(private readonly userBanService: UserBanService) {}
@@ -52,6 +58,7 @@ export class UserBanController {
     return this.userBanService.update(id, dto);
   }
 
+  @Roles('admin')
   @Delete(':id')
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.userBanService.remove(id);

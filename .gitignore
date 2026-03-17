@@ -1,0 +1,15 @@
+# Environment variables (secrets)
+.env
+*.env.local
+
+# Node
+node_modules/
+dist/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

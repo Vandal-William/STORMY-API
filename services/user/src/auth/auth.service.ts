@@ -34,7 +34,7 @@ export class AuthService {
         },
       });
 
-      const accessToken = this.generateToken(user.id, user.username);
+      const accessToken = this.generateToken(user.id, user.username, user.role);
       const refreshToken = this.generateRefreshToken();
       await this.storeRefreshToken(user.id, refreshToken);
 
@@ -72,7 +72,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const accessToken = this.generateToken(user.id, user.username);
+    const accessToken = this.generateToken(user.id, user.username, user.role);
     const refreshToken = this.generateRefreshToken();
     await this.storeRefreshToken(user.id, refreshToken);
 
@@ -98,6 +98,7 @@ export class AuthService {
       access_token: this.generateToken(
         storedToken.user.id,
         storedToken.user.username,
+        storedToken.user.role,
       ),
     };
   }
@@ -132,8 +133,8 @@ export class AuthService {
     return user;
   }
 
-  private generateToken(userId: string, username: string): string {
-    return this.jwtService.sign({ sub: userId, username });
+  private generateToken(userId: string, username: string, role: string): string {
+    return this.jwtService.sign({ sub: userId, username, role });
   }
 
   private generateRefreshToken(): string {

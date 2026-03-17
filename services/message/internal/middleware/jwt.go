@@ -2,7 +2,6 @@ package middleware
 
 import (
     "errors"
-    "fmt"
     "net/http"
     "strings"
 
@@ -24,29 +23,6 @@ func JWTMiddleware(jwtSecret string) gin.HandlerFunc {
     return func(c *gin.Context) {
         var tokenString string
         var err error
-
-        // [DEBUG] Log tous les headers et cookies reçus
-        fmt.Printf("\n=== MESSAGE-SERVICE JWT MIDDLEWARE ===\n")
-        fmt.Printf("[MSG] Request: %s %s\n", c.Request.Method, c.Request.RequestURI)
-        fmt.Printf("[MSG] Headers reçus du gateway:\n")
-        for name, values := range c.Request.Header {
-            if name == "Authorization" {
-                fmt.Printf("  - %s: %s...\n", name, values[0][:50])
-            } else if name == "Cookie" {
-                fmt.Printf("  - %s: %v\n", name, values)
-            } else {
-                fmt.Printf("  - %s: %v\n", name, values)
-            }
-        }
-        fmt.Printf("[MSG] Tous les cookies:\n")
-        for _, cookie := range c.Request.Cookies() {
-            if len(cookie.Value) > 30 {
-                fmt.Printf("  - %s: %s...\n", cookie.Name, cookie.Value[:30])
-            } else {
-                fmt.Printf("  - %s: %s\n", cookie.Name, cookie.Value)
-            }
-        }
-        fmt.Printf("========================================\n\n")
 
         // 1. Essayer d'abord le cookie "access_token" (du gateway)
         tokenString, err = c.Cookie("access_token")

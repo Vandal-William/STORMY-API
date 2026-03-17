@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -39,7 +39,8 @@ func (h *ConversationHandler) CreateConversation(c *gin.Context) {
 
 	conversation, err := h.conversationService.CreateConversation(c.Request.Context(), &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] CreateConversation failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
@@ -57,7 +58,8 @@ func (h *ConversationHandler) GetConversation(c *gin.Context) {
 
 	conversation, err := h.conversationService.GetConversation(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] GetConversation failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
@@ -83,17 +85,14 @@ func (h *ConversationHandler) GetUserConversations(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("[DEBUG] GetUserConversations - claims.UserID: %s\n", claims.UserID)
-
 	conversations, err := h.conversationService.GetUserConversations(c.Request.Context(), claims.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] GetUserConversations failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
-	fmt.Printf("[DEBUG] GetUserConversations - résultats: %d conversations trouvées\n", len(conversations))
-
-	// ✅ Assurer que la liste n'est jamais nil (retourner [] au lieu de null)
+	// Assurer que la liste n'est jamais nil (retourner [] au lieu de null)
 	if conversations == nil {
 		conversations = []domain.Conversation{}
 	}
@@ -112,7 +111,8 @@ func (h *ConversationHandler) GetConversationMembers(c *gin.Context) {
 
 	members, err := h.conversationService.GetConversationMembers(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] GetConversationMembers failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
@@ -141,7 +141,8 @@ func (h *ConversationHandler) UpdateConversation(c *gin.Context) {
 
 	conversation, err := h.conversationService.UpdateConversation(c.Request.Context(), id, &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] UpdateConversation failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
@@ -159,7 +160,8 @@ func (h *ConversationHandler) DeleteConversation(c *gin.Context) {
 
 	err = h.conversationService.DeleteConversation(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] DeleteConversation failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
@@ -185,7 +187,8 @@ func (h *ConversationHandler) AddMember(c *gin.Context) {
 
 	err = h.conversationService.AddMember(c.Request.Context(), id, req.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] AddMember failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
@@ -209,7 +212,8 @@ func (h *ConversationHandler) RemoveMember(c *gin.Context) {
 
 	err = h.conversationService.RemoveMember(c.Request.Context(), id, userIDStr)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[ERROR] RemoveMember failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 

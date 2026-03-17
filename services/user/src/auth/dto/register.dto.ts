@@ -23,6 +23,9 @@ export class RegisterDto {
   @MinLength(8, {
     message: 'Le mot de passe doit contenir au moins 8 caractères',
   })
+  @MaxLength(500, {
+    message: 'Le mot de passe ne doit pas dépasser 500 caractères',
+  })
   @Matches(/(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])/, {
     message:
       'Le mot de passe doit contenir au moins un chiffre et un caractère spécial',

@@ -57,7 +57,7 @@ func main() {
     // Get JWT secret from environment
     jwtSecret := os.Getenv("JWT_SECRET")
     if jwtSecret == "" {
-        jwtSecret = "dev-secret-change-in-production"
+        log.Fatal("JWT_SECRET environment variable is required")
     }
 
     fmt.Fprintf(os.Stderr, "[STARTUP] Setting up routes\n")

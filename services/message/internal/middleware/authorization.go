@@ -50,8 +50,7 @@ func (a *AuthorizationMiddleware) IsConversationOwnerOrAdmin(ctx *gin.Context, c
     }
 
     for _, member := range members {
-        if member.UserID == userID {
-            // Supposer que Role ou IsOwner existe
+        if member.UserID == userID && (member.Role == "owner" || member.Role == "admin") {
             return true, nil
         }
     }

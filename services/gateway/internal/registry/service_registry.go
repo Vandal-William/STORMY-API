@@ -1,3 +1,4 @@
+// Package registry provides service registration for the gateway.
 package registry
 
 import (

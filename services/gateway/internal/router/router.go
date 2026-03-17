@@ -1,3 +1,4 @@
+// Package router provides HTTP routing for the gateway.
 package router
 
 import (

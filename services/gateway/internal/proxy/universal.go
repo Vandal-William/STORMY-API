@@ -76,7 +76,7 @@ func (h *UniversalProxyHandler) ProxyRequest(c *gin.Context, targetURL string) {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "service unavailable"})
 		return
 	}
-	defer resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// Copier les headers de la réponse
 	h.copyResponseHeaders(c, resp)
@@ -85,7 +85,11 @@ func (h *UniversalProxyHandler) ProxyRequest(c *gin.Context, targetURL string) {
 	h.copyResponseCookies(c, resp)
 
 	// Lire et renvoyer le body
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to read response body"})
+		return
+	}
 	c.Data(resp.StatusCode, resp.Header.Get("Content-Type"), body)
 }
 

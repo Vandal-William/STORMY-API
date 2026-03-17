@@ -201,7 +201,7 @@ func createHealthCheckHandler(reg *registry.ServiceRegistry) gin.HandlerFunc {
 			}
 
 			// Fermer le body de la réponse
-			defer resp.Body.Close()
+			_ = resp.Body.Close()
 
 			// Retourner le status code
 			statusText := "500 Error"

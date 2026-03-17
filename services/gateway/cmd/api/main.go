@@ -1,3 +1,4 @@
+// Package main est l'entrée principale de la gateway.
 package main
 
 import (

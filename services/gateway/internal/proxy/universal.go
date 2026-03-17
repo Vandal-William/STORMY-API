@@ -209,13 +209,6 @@ func (h *UniversalProxyHandler) copyRequestHeaders(src *http.Request, dst *http.
 	}
 }
 
-// copyRequestCookies copie tous les cookies de la requête originale
-// vers la requête du proxy en utilisant le header Cookie standard.
-//
-// Paramètres:
-//   - src: La requête source
-//   - dst: La requête destination (proxy)
-func (h *UniversalProxyHandler) copyRequestCookies(src *http.Request, dst *http.Request) {
 	// Les cookies sont déjà dans src.Cookies(), on les copie tous
 	for _, cookie := range src.Cookies() {
 		dst.AddCookie(cookie)
